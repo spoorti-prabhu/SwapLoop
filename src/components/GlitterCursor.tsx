@@ -12,7 +12,9 @@ interface GlitterParticle {
   decay: number;
   rotation: number;
   rotationSpeed: number;
-  type: 'star' | 'diamond' | 'spark';
+  twinkleSpeed: number;
+  twinklePhase: number;
+  type: 'star4' | 'star8' | 'diamond' | 'sparkle';
 }
 
 export const GlitterCursor: React.FC = () => {
@@ -25,187 +27,212 @@ export const GlitterCursor: React.FC = () => {
     if (!ctx) return;
 
     let animId: number;
-    const particles: GlitterParticle[] = [];
+    let particles: GlitterParticle[] = [];
 
-    // Aesthetic Blush Mist & Golden Shimmer palette
+    // Aesthetic SwapLoop Glitter Palette (Rose, Magenta, Golden Champagne, Diamond White)
     const colors = [
-      '#F472B6', // Blush pink
-      '#DB2777', // Fuchsia rose
-      '#FB7185', // Rose glow
-      '#FDE047', // Radiant gold shimmer
-      '#FBBF24', // Warm amber gold
-      '#FFFFFF', // Diamond white
-      '#E879F9', // Orchid violet
-      '#FDA4AF'  // Soft pink
+      '#FFD700', // Bright Gold
+      '#FFF3B0', // Pale Champagne
+      '#FF69B4', // Hot Pink
+      '#DB2777', // Vivid Fuchsia
+      '#F472B6', // Blush Rose
+      '#FFFFFF', // Diamond White
+      '#E879F9', // Orchid Purple
+      '#38BDF8', // Starlight Cyan Spark
+      '#FFAAA6'  // Soft Peach Pink
     ];
 
-    // Resize canvas
-    const updateSize = () => {
+    // Resize canvas to full viewport
+    const handleResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
-    updateSize();
-    window.addEventListener('resize', updateSize);
+    handleResize();
+    window.addEventListener('resize', handleResize);
 
-    // Helper: Draw 4-point sparkle star (✦)
-    const drawStar = (
-      context: CanvasRenderingContext2D,
-      cx: number,
-      cy: number,
-      outerRadius: number,
-      innerRadius: number
-    ) => {
-      let rot = (Math.PI / 2) * 3;
-      let x = cx;
-      let y = cy;
-      const step = Math.PI / 4;
-
+    // Draw 4-point star (✦)
+    const drawStar4 = (context: CanvasRenderingContext2D, size: number) => {
       context.beginPath();
-      context.moveTo(cx, cy - outerRadius);
-      for (let i = 0; i < 4; i++) {
-        x = cx + Math.cos(rot) * outerRadius;
-        y = cy + Math.sin(rot) * outerRadius;
-        context.lineTo(x, y);
-        rot += step;
-
-        x = cx + Math.cos(rot) * innerRadius;
-        y = cy + Math.sin(rot) * innerRadius;
-        context.lineTo(x, y);
-        rot += step;
-      }
-      context.lineTo(cx, cy - outerRadius);
+      context.moveTo(0, -size);
+      context.quadraticCurveTo(0, 0, size, 0);
+      context.quadraticCurveTo(0, 0, 0, size);
+      context.quadraticCurveTo(0, 0, -size, 0);
+      context.quadraticCurveTo(0, 0, 0, -size);
       context.closePath();
       context.fill();
     };
 
-    // Helper: Draw diamond sparkle (❖)
-    const drawDiamond = (
-      context: CanvasRenderingContext2D,
-      cx: number,
-      cy: number,
-      w: number,
-      h: number
-    ) => {
+    // Draw 8-point sparkle star (✶)
+    const drawStar8 = (context: CanvasRenderingContext2D, size: number) => {
+      drawStar4(context, size);
+      context.save();
+      context.rotate(Math.PI / 4);
+      drawStar4(context, size * 0.6);
+      context.restore();
+    };
+
+    // Draw diamond (❖)
+    const drawDiamond = (context: CanvasRenderingContext2D, size: number) => {
       context.beginPath();
-      context.moveTo(cx, cy - h);
-      context.lineTo(cx + w, cy);
-      context.lineTo(cx, cy + h);
-      context.lineTo(cx - w, cy);
+      context.moveTo(0, -size);
+      context.lineTo(size * 0.6, 0);
+      context.lineTo(0, size);
+      context.lineTo(-size * 0.6, 0);
       context.closePath();
       context.fill();
     };
 
-    // Spawn sparkles
-    const spawnSparkles = (x: number, y: number, count: number, speedMultiplier = 1) => {
-      for (let i = 0; i < count; i++) {
-        if (particles.length > 70) break; // Gentle cap
+    // Spawn single glitter particle
+    const createParticle = (x: number, y: number, isBurst = false): GlitterParticle => {
+      const types: ('star4' | 'star8' | 'diamond' | 'sparkle')[] = ['star4', 'star8', 'diamond', 'sparkle'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      
+      const angle = Math.random() * Math.PI * 2;
+      const speed = isBurst
+        ? Math.random() * 3.5 + 1.2
+        : Math.random() * 1.6 + 0.3;
 
-        const types: ('star' | 'diamond' | 'spark')[] = ['star', 'diamond', 'spark', 'star'];
-        const type = types[Math.floor(Math.random() * types.length)];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const size = Math.random() * 5 + 4; // 4px to 9px (clearly visible!)
+      const size = isBurst
+        ? Math.random() * 8 + 5
+        : Math.random() * 6 + 3.5; // 3.5px to 9.5px
 
-        const angle = Math.random() * Math.PI * 2;
-        const speed = (Math.random() * 1.5 + 0.5) * speedMultiplier;
+      return {
+        x: x + (Math.random() - 0.5) * 8,
+        y: y + (Math.random() - 0.5) * 8,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed + 0.35, // Soft gravity drift
+        size,
+        maxSize: size,
+        color,
+        alpha: 1.0,
+        decay: Math.random() * 0.02 + 0.018, // Lasts ~0.8 to 1.2 seconds
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.15,
+        twinkleSpeed: Math.random() * 0.2 + 0.1,
+        twinklePhase: Math.random() * Math.PI * 2,
+        type
+      };
+    };
 
-        particles.push({
-          x: x + (Math.random() - 0.5) * 6,
-          y: y + (Math.random() - 0.5) * 6,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed + 0.3, // Gentle downward drift
-          size,
-          maxSize: size,
-          color,
-          alpha: 1.0,
-          decay: Math.random() * 0.025 + 0.02, // Fades gracefully in ~0.6 - 0.8s
-          rotation: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * 0.12,
-          type
-        });
+    // Continuous track interpolation for unbroken glitter fairy dust trail
+    let lastX: number | null = null;
+    let lastY: number | null = null;
+
+    const spawnTrail = (currentX: number, currentY: number) => {
+      if (lastX === null || lastY === null) {
+        lastX = currentX;
+        lastY = currentY;
+      }
+
+      const dx = currentX - lastX;
+      const dy = currentY - lastY;
+      const dist = Math.hypot(dx, dy);
+
+      // Interpolate along the path so fast cursor movements don't leave gaps!
+      const steps = Math.min(Math.max(Math.floor(dist / 8), 1), 8);
+
+      for (let i = 0; i <= steps; i++) {
+        if (particles.length >= 120) break;
+        const progress = i / steps;
+        const posX = lastX + dx * progress;
+        const posY = lastY + dy * progress;
+
+        // Spawn 1-2 particles at each interpolation point
+        particles.push(createParticle(posX, posY, false));
+        if (Math.random() > 0.5) {
+          particles.push(createParticle(posX, posY, false));
+        }
+      }
+
+      lastX = currentX;
+      lastY = currentY;
+    };
+
+    const handlePointerMove = (e: MouseEvent) => {
+      spawnTrail(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        spawnTrail(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
 
-    // Mouse movement listener
-    let lastTime = 0;
-    const onMove = (e: MouseEvent) => {
-      const now = performance.now();
-      // Throttle slightly to ~40fps spawn rate so glitter is gentle and not crowded
-      if (now - lastTime > 22) {
-        lastTime = now;
-        spawnSparkles(e.clientX, e.clientY, Math.random() > 0.35 ? 2 : 1);
+    const handleClick = (e: MouseEvent) => {
+      // Sparkling burst on click
+      for (let i = 0; i < 20; i++) {
+        if (particles.length >= 150) break;
+        particles.push(createParticle(e.clientX, e.clientY, true));
       }
     };
 
-    // Touch support
-    const onTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      if (touch) {
-        spawnSparkles(touch.clientX, touch.clientY, 2);
-      }
-    };
+    window.addEventListener('mousemove', handlePointerMove, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('click', handleClick, { passive: true });
 
-    // Click burst
-    const onClick = (e: MouseEvent) => {
-      spawnSparkles(e.clientX, e.clientY, 8, 1.8);
-    };
-
-    window.addEventListener('mousemove', onMove, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
-    window.addEventListener('click', onClick, { passive: true });
-
-    // Animation Loop
-    const loop = () => {
+    // Render loop
+    const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
 
+        // Physics
         p.x += p.vx;
         p.y += p.vy;
         p.alpha -= p.decay;
         p.rotation += p.rotationSpeed;
-        p.size = p.maxSize * Math.max(0, p.alpha);
+        p.twinklePhase += p.twinkleSpeed;
 
-        if (p.alpha <= 0 || p.size <= 0.3) {
+        // Twinkle factor between 0.7 and 1.3
+        const twinkle = 1 + 0.3 * Math.sin(p.twinklePhase);
+        p.size = p.maxSize * Math.max(0, p.alpha) * twinkle;
+
+        // Remove dead particles
+        if (p.alpha <= 0 || p.size <= 0.2) {
           particles.splice(i, 1);
           continue;
         }
 
+        // Draw particle
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation);
-        ctx.globalAlpha = p.alpha;
+        ctx.globalAlpha = Math.min(Math.max(p.alpha, 0), 1);
         ctx.fillStyle = p.color;
 
-        // Mild glowing halo
+        // Glowing outer shimmer
         ctx.shadowColor = p.color;
-        ctx.shadowBlur = 6;
+        ctx.shadowBlur = 8;
 
-        if (p.type === 'star') {
-          drawStar(ctx, 0, 0, p.size, p.size * 0.3);
+        if (p.type === 'star8') {
+          drawStar8(ctx, p.size);
+        } else if (p.type === 'star4') {
+          drawStar4(ctx, p.size);
         } else if (p.type === 'diamond') {
-          drawDiamond(ctx, 0, 0, p.size * 0.6, p.size);
+          drawDiamond(ctx, p.size);
         } else {
-          // Circular glowing spark
+          // Circular bright spark
           ctx.beginPath();
-          ctx.arc(0, 0, p.size * 0.5, 0, Math.PI * 2);
+          ctx.arc(0, 0, p.size * 0.6, 0, Math.PI * 2);
           ctx.fill();
         }
 
         ctx.restore();
       }
 
-      animId = requestAnimationFrame(loop);
+      animId = requestAnimationFrame(animate);
     };
 
-    animId = requestAnimationFrame(loop);
+    animId = requestAnimationFrame(animate);
 
     return () => {
       cancelAnimationFrame(animId);
-      window.removeEventListener('resize', updateSize);
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('click', onClick);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('click', handleClick);
     };
   }, []);
 
@@ -219,7 +246,8 @@ export const GlitterCursor: React.FC = () => {
         width: '100vw',
         height: '100vh',
         pointerEvents: 'none',
-        zIndex: 999999
+        zIndex: 9999999,
+        willChange: 'transform'
       }}
       aria-hidden="true"
     />
