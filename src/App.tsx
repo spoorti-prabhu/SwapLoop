@@ -16,6 +16,7 @@ import { NotificationDrawer } from './components/NotificationDrawer';
 import { TechArchitectureModal } from './components/TechArchitectureModal';
 import { LoginPage } from './components/LoginPage';
 import { AdminView } from './components/AdminView';
+import { GlitterCursor } from './components/GlitterCursor';
 import {
   Bell,
   Award,
@@ -354,6 +355,7 @@ const MainAppLayout: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <SwapLoopProvider>
+      <GlitterCursor />
       <MainAppLayout />
     </SwapLoopProvider>
   );
