@@ -1,79 +1,68 @@
 import React, { useEffect, useRef } from 'react';
 
-interface Particle {
+interface GlitterParticle {
   x: number;
   y: number;
   vx: number;
   vy: number;
   size: number;
-  initialSize: number;
+  maxSize: number;
   color: string;
   alpha: number;
   decay: number;
   rotation: number;
   rotationSpeed: number;
-  shape: 'star' | 'circle' | 'diamond';
+  type: 'star' | 'diamond' | 'spark';
 }
 
 export const GlitterCursor: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    // Respect user's motion preferences
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId: number;
-    let isRunning = false;
-    const particles: Particle[] = [];
+    let animId: number;
+    const particles: GlitterParticle[] = [];
 
-    // Aesthetic Blush Mist palette
-    const glitterColors = [
+    // Aesthetic Blush Mist & Golden Shimmer palette
+    const colors = [
       '#F472B6', // Blush pink
-      '#DB2777', // Vivid rose
-      '#F43F5E', // Coral pink
-      '#FDE047', // Soft golden shimmer
-      '#FFFFFF', // Pure sparkle white
+      '#DB2777', // Fuchsia rose
+      '#FB7185', // Rose glow
+      '#FDE047', // Radiant gold shimmer
+      '#FBBF24', // Warm amber gold
+      '#FFFFFF', // Diamond white
       '#E879F9', // Orchid violet
-      '#FCE7F3'  // Pale blush mist
+      '#FDA4AF'  // Soft pink
     ];
 
-    // Resize canvas to match window
-    const handleResize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
-      ctx.scale(dpr, dpr);
+    // Resize canvas
+    const updateSize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
+    updateSize();
+    window.addEventListener('resize', updateSize);
 
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    // Helper: Draw 4-pointed sparkle star (✦)
-    const drawSparkleStar = (
+    // Helper: Draw 4-point sparkle star (✦)
+    const drawStar = (
       context: CanvasRenderingContext2D,
       cx: number,
       cy: number,
-      spikes: number,
       outerRadius: number,
       innerRadius: number
     ) => {
       let rot = (Math.PI / 2) * 3;
       let x = cx;
       let y = cy;
-      const step = Math.PI / spikes;
+      const step = Math.PI / 4;
 
       context.beginPath();
       context.moveTo(cx, cy - outerRadius);
-
-      for (let i = 0; i < spikes; i++) {
+      for (let i = 0; i < 4; i++) {
         x = cx + Math.cos(rot) * outerRadius;
         y = cy + Math.sin(rot) * outerRadius;
         context.lineTo(x, y);
@@ -89,146 +78,149 @@ export const GlitterCursor: React.FC = () => {
       context.fill();
     };
 
-    // Draw diamond sparkle
+    // Helper: Draw diamond sparkle (❖)
     const drawDiamond = (
       context: CanvasRenderingContext2D,
       cx: number,
       cy: number,
-      size: number
+      w: number,
+      h: number
     ) => {
       context.beginPath();
-      context.moveTo(cx, cy - size);
-      context.lineTo(cx + size * 0.6, cy);
-      context.lineTo(cx, cy + size);
-      context.lineTo(cx - size * 0.6, cy);
+      context.moveTo(cx, cy - h);
+      context.lineTo(cx + w, cy);
+      context.lineTo(cx, cy + h);
+      context.lineTo(cx - w, cy);
       context.closePath();
       context.fill();
     };
 
+    // Spawn sparkles
+    const spawnSparkles = (x: number, y: number, count: number, speedMultiplier = 1) => {
+      for (let i = 0; i < count; i++) {
+        if (particles.length > 70) break; // Gentle cap
+
+        const types: ('star' | 'diamond' | 'spark')[] = ['star', 'diamond', 'spark', 'star'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const size = Math.random() * 5 + 4; // 4px to 9px (clearly visible!)
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = (Math.random() * 1.5 + 0.5) * speedMultiplier;
+
+        particles.push({
+          x: x + (Math.random() - 0.5) * 6,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed + 0.3, // Gentle downward drift
+          size,
+          maxSize: size,
+          color,
+          alpha: 1.0,
+          decay: Math.random() * 0.025 + 0.02, // Fades gracefully in ~0.6 - 0.8s
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.12,
+          type
+        });
+      }
+    };
+
+    // Mouse movement listener
+    let lastTime = 0;
+    const onMove = (e: MouseEvent) => {
+      const now = performance.now();
+      // Throttle slightly to ~40fps spawn rate so glitter is gentle and not crowded
+      if (now - lastTime > 22) {
+        lastTime = now;
+        spawnSparkles(e.clientX, e.clientY, Math.random() > 0.35 ? 2 : 1);
+      }
+    };
+
+    // Touch support
+    const onTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (touch) {
+        spawnSparkles(touch.clientX, touch.clientY, 2);
+      }
+    };
+
+    // Click burst
+    const onClick = (e: MouseEvent) => {
+      spawnSparkles(e.clientX, e.clientY, 8, 1.8);
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('click', onClick, { passive: true });
+
     // Animation Loop
-    const render = () => {
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    const loop = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
 
-        // Update physics
         p.x += p.vx;
         p.y += p.vy;
         p.alpha -= p.decay;
         p.rotation += p.rotationSpeed;
-        p.size = p.initialSize * (p.alpha > 0 ? p.alpha : 0);
+        p.size = p.maxSize * Math.max(0, p.alpha);
 
-        // Remove dead particles
-        if (p.alpha <= 0 || p.size <= 0.2) {
+        if (p.alpha <= 0 || p.size <= 0.3) {
           particles.splice(i, 1);
           continue;
         }
 
-        // Draw particle
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation);
-        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.globalAlpha = p.alpha;
         ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 4;
 
-        if (p.shape === 'star') {
-          drawSparkleStar(ctx, 0, 0, 4, p.size * 1.6, p.size * 0.4);
-        } else if (p.shape === 'diamond') {
-          drawDiamond(ctx, 0, 0, p.size * 1.2);
+        // Mild glowing halo
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+
+        if (p.type === 'star') {
+          drawStar(ctx, 0, 0, p.size, p.size * 0.3);
+        } else if (p.type === 'diamond') {
+          drawDiamond(ctx, 0, 0, p.size * 0.6, p.size);
         } else {
+          // Circular glowing spark
           ctx.beginPath();
-          ctx.arc(0, 0, p.size * 0.8, 0, Math.PI * 2);
+          ctx.arc(0, 0, p.size * 0.5, 0, Math.PI * 2);
           ctx.fill();
         }
 
         ctx.restore();
       }
 
-      // If particles remain, keep loop running. If empty, pause to preserve 0% idle CPU
-      if (particles.length > 0) {
-        animationFrameId = requestAnimationFrame(render);
-      } else {
-        isRunning = false;
-      }
+      animId = requestAnimationFrame(loop);
     };
 
-    const startAnimation = () => {
-      if (!isRunning) {
-        isRunning = true;
-        animationFrameId = requestAnimationFrame(render);
-      }
-    };
-
-    // Track mouse position and spawn mild glitter
-    let lastX = 0;
-    let lastY = 0;
-    let lastSpawnTime = 0;
-
-    const handlePointerMove = (e: MouseEvent | TouchEvent) => {
-      const clientX = 'touches' in e ? e.touches[0]?.clientX ?? 0 : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0]?.clientY ?? 0 : e.clientY;
-
-      const now = performance.now();
-      const dx = clientX - lastX;
-      const dy = clientY - lastY;
-      const distance = Math.hypot(dx, dy);
-
-      // Only spawn if cursor moved at least 5px and throttled to smooth frequency
-      if (distance > 5 && now - lastSpawnTime > 16) {
-        lastX = clientX;
-        lastY = clientY;
-        lastSpawnTime = now;
-
-        // Mild glitter: spawn 1-2 subtle particles per movement
-        const count = Math.random() > 0.4 ? 2 : 1;
-
-        for (let i = 0; i < count; i++) {
-          if (particles.length >= 40) break; // Keep cap low for mild aesthetic
-
-          const shapes: ('star' | 'circle' | 'diamond')[] = ['star', 'circle', 'diamond'];
-          const shape = shapes[Math.floor(Math.random() * shapes.length)];
-          const color = glitterColors[Math.floor(Math.random() * glitterColors.length)];
-
-          particles.push({
-            x: clientX + (Math.random() - 0.5) * 8,
-            y: clientY + (Math.random() - 0.5) * 8,
-            vx: (Math.random() - 0.5) * 0.9,
-            vy: Math.random() * 0.6 + 0.2, // Subtle gentle downward drift
-            size: Math.random() * 2.5 + 1.5, // Mild tiny size (1.5px to 4px)
-            initialSize: Math.random() * 2.5 + 1.5,
-            color,
-            alpha: Math.random() * 0.4 + 0.55, // Soft translucent opacity (0.55 - 0.95)
-            decay: Math.random() * 0.02 + 0.025, // Fades smoothly in ~0.5 - 0.7s
-            rotation: Math.random() * Math.PI * 2,
-            rotationSpeed: (Math.random() - 0.5) * 0.08,
-            shape
-          });
-        }
-
-        startAnimation();
-      }
-    };
-
-    window.addEventListener('mousemove', handlePointerMove, { passive: true });
-    window.addEventListener('touchmove', handlePointerMove, { passive: true });
+    animId = requestAnimationFrame(loop);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handlePointerMove);
-      window.removeEventListener('touchmove', handlePointerMove);
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', updateSize);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('click', onClick);
     };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-[9999] select-none"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none',
+        zIndex: 999999
+      }}
       aria-hidden="true"
     />
   );
