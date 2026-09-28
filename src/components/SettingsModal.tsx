@@ -55,7 +55,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     'North Campus',
     'Downtown Campus',
     'Engineering Quad',
-    'Medical Center'
+    'Stanley'
   ];
 
   const safeLocations = [

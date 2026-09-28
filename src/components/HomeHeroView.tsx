@@ -11,7 +11,6 @@ import {
   Building,
   Award,
   Repeat,
-  Layers,
   ChevronRight,
   Gift
 } from 'lucide-react';
@@ -20,7 +19,7 @@ interface HomeHeroViewProps {
   onOpenArchitecture?: () => void;
 }
 
-export const HomeHeroView: React.FC<HomeHeroViewProps> = ({ onOpenArchitecture }) => {
+export const HomeHeroView: React.FC<HomeHeroViewProps> = ({ onOpenArchitecture: _onOpenArchitecture }) => {
   const { setActiveTab, dropCountdownSeconds } = useSwapLoop();
   const [activeCycleStep, setActiveCycleStep] = useState(0);
   const [isBlindSecurityOpen, setIsBlindSecurityOpen] = useState(false);
@@ -487,7 +486,7 @@ export const HomeHeroView: React.FC<HomeHeroViewProps> = ({ onOpenArchitecture }
 
       {/* 3. CAMPUS ECOSYSTEM & TRUST PILLARS */}
       <section className="rounded-3xl bg-white border border-pink-100 p-8 sm:p-12 shadow-sm space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-pink-50 pb-6">
+        <div className="border-b border-pink-50 pb-6">
           <div>
             <div className="text-xs font-bold text-pink-600 uppercase tracking-wider mb-1">Dormitory Architecture</div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
@@ -496,18 +495,6 @@ export const HomeHeroView: React.FC<HomeHeroViewProps> = ({ onOpenArchitecture }
             <p className="text-sm text-slate-500 mt-1">
               Protected by college verification, trust tiers, and physical campus escrow stations.
             </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {onOpenArchitecture && (
-              <button
-                onClick={onOpenArchitecture}
-                className="px-4 py-2 rounded-full bg-pink-50 hover:bg-pink-100 text-pink-700 text-xs font-bold border border-pink-200 transition-all flex items-center gap-1.5"
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Interactive Tech Architecture</span>
-              </button>
-            )}
           </div>
         </div>
 

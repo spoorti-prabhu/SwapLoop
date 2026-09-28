@@ -335,23 +335,18 @@ export const BrowseItemsView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Card Action: Animated Heart "I Want This" Toggle */}
+                {/* Card Action: "I Want This" Toggle */}
                 <div className="pt-3 px-1">
                   <button
                     onClick={() => handleToggleWant(item.id)}
-                    className={`w-full py-2.5 px-4 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition-all duration-200 transform active:scale-95 cursor-pointer ${
+                    className={`w-full py-2.5 px-4 rounded-2xl text-xs font-black flex items-center justify-center transition-all duration-200 transform active:scale-95 cursor-pointer ${
                       inWants
                         ? 'bg-gradient-to-r from-[#f472b6] to-[#fb7185] text-white shadow-md shadow-pink-500/25 ring-2 ring-pink-300'
                         : 'bg-[#FFF7FA] hover:bg-pink-100 text-[#DE5B9B] border border-pink-200/80 hover:border-pink-300'
                     }`}
                   >
-                    <Heart
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        inWants ? 'fill-white text-white scale-125' : 'text-[#DE5B9B] group-hover:scale-110'
-                      }`}
-                    />
                     <span className="tracking-wide uppercase text-[11px]">
-                      {inWants ? '♥ In My Wants' : '♡ I Want This'}
+                      {inWants ? 'In My Wants' : 'I Want This'}
                     </span>
                   </button>
                 </div>

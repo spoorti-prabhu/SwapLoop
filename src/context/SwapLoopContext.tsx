@@ -88,17 +88,108 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const initialAuthenticated = (localStorage.getItem('swaploop_authenticated') === 'true' || !!initialAuthUserId);
   const initialRole = (localStorage.getItem('swaploop_auth_role') as UserRole) || 'Student';
 
+  const getSecondsUntilNextDrop = () => {
+    const now = new Date();
+    const target = new Date();
+    target.setHours(17, 0, 0, 0); // 5:00 PM
+    if (now.getTime() >= target.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
+    return Math.max(0, Math.floor((target.getTime() - now.getTime()) / 1000));
+  };
+
+  const getInitialWants = (): WantRelation[] => {
+    try {
+      const stored = localStorage.getItem('swaploop_local_wants');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return SEED_WANTS_SCENARIO_A;
+  };
+
+  const getInitialItems = (): Item[] => {
+    try {
+      const stored = localStorage.getItem('swaploop_local_items');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return SEED_ITEMS_SCENARIO_A;
+  };
+
+  const DEFAULT_DEMO_PROPOSAL: Proposal = {
+    id: '0482',
+    type: 'loop',
+    status: 'sealed',
+    handoverMethod: 'desk',
+    createdAt: Date.now() - 3600000 * 2,
+    expiresAt: Date.now() + 3600000 * 4,
+    signature: 'demo-loop-0482',
+    members: [
+      {
+        studentId: 'user-arjun',
+        codename: 'Swapper 1',
+        givesItemId: 'item-drafter',
+        receivesItemId: 'item-bicycle',
+        accepted: true,
+        handoverChoice: 'desk',
+        dropoffCode: '482109',
+        dropoffDone: true,
+        pickupCode: '912048',
+        pickupDone: false,
+        name: 'Swapper 1',
+        contactNote: 'Item received · 4:32 PM'
+      },
+      {
+        studentId: 'user-bhavya',
+        codename: 'Swapper 2',
+        givesItemId: 'item-bicycle',
+        receivesItemId: 'item-ext-board',
+        accepted: true,
+        handoverChoice: 'desk',
+        dropoffCode: '629401',
+        dropoffDone: true,
+        pickupCode: '741295',
+        pickupDone: false,
+        name: 'Swapper 2',
+        contactNote: 'Item received · 4:48 PM'
+      },
+      {
+        studentId: 'user-chetan',
+        codename: 'Swapper 3',
+        givesItemId: 'item-ext-board',
+        receivesItemId: 'item-drafter',
+        accepted: true,
+        handoverChoice: 'desk',
+        dropoffCode: '839201',
+        dropoffDone: false,
+        pickupCode: '582319',
+        pickupDone: false,
+        name: 'Swapper 3',
+        contactNote: 'Awaiting item'
+      }
+    ]
+  };
+
+  const getInitialProposals = (): Proposal[] => {
+    try {
+      const stored = localStorage.getItem('swaploop_local_proposals');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [DEFAULT_DEMO_PROPOSAL];
+  };
+
   const [currentUserId, setCurrentUserId] = useState<string>(initialAuthenticated ? initialAuthUserId : '');
   const [currentRole, setCurrentRole] = useState<UserRole>(initialRole);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialAuthenticated && !!initialAuthUserId);
   const [activeTab, setActiveTab] = useState<string>(initialRole === 'Desk Operator' ? 'desk' : initialRole === 'Admin' ? 'admin' : 'dashboard');
-  const [items, setItems] = useState<Item[]>(SEED_ITEMS_SCENARIO_A);
-  const [wants, setWants] = useState<WantRelation[]>(SEED_WANTS_SCENARIO_A);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [items, setItems] = useState<Item[]>(getInitialItems);
+  const [wants, setWants] = useState<WantRelation[]>(getInitialWants);
+  const [proposals, setProposals] = useState<Proposal[]>(getInitialProposals);
   const [currentScenario, setCurrentScenario] = useState<string>('A');
   const [stats, setStats] = useState<LoopWallStats>({ totalRehomed: 24, loopsCompleted: 8, longestGiftChain: 5 });
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [dropCountdownSeconds, setDropCountdownSeconds] = useState<number>(3600 * 3 + 1420);
+  const [dropCountdownSeconds, setDropCountdownSeconds] = useState<number>(getSecondsUntilNextDrop);
 
   // Sync data from real backend API
   const refreshData = async () => {
@@ -198,11 +289,13 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     refreshData();
   }, [currentUserId]);
 
-  // Live countdown timer
+  // Live countdown timer (Next Drop: 5:00 PM next day or today)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDropCountdownSeconds(prev => (prev > 0 ? prev - 1 : 3600 * 24));
-    }, 1000);
+    const updateCountdown = () => {
+      setDropCountdownSeconds(getSecondsUntilNextDrop());
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -319,40 +412,70 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     imageUrl?: string;
     isFreeGift: boolean;
   }) => {
+    const newItem: Item = {
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      ownerId: currentUser?.id || 'user-arjun',
+      title: itemData.title,
+      category: itemData.category,
+      condition: itemData.condition,
+      valueBand: itemData.valueBand,
+      imageUrl: itemData.imageUrl || '',
+      isFreeGift: itemData.isFreeGift,
+      isLockedInProposal: false,
+      createdAt: Date.now()
+    };
+    const updated = [newItem, ...items];
+    setItems(updated);
+    localStorage.setItem('swaploop_local_items', JSON.stringify(updated));
+
     try {
       await api.createItem(itemData);
       await refreshData();
     } catch (err: any) {
-      alert(err.message || 'Failed to add item');
-      throw err;
+      console.warn('API sync warning for addItem (using optimistic state):', err);
     }
   };
 
   const editItem = async (id: string, updates: Partial<Item>) => {
+    const updated = items.map(it => it.id === id ? { ...it, ...updates } : it);
+    setItems(updated);
+    localStorage.setItem('swaploop_local_items', JSON.stringify(updated));
     try {
       await api.updateItem(id, updates);
       await refreshData();
     } catch (err) {
-      console.error('Edit error:', err);
+      console.warn('API sync warning for editItem (using optimistic state):', err);
     }
   };
 
   const deleteItem = async (id: string) => {
+    const updated = items.filter(it => it.id !== id);
+    setItems(updated);
+    localStorage.setItem('swaploop_local_items', JSON.stringify(updated));
     try {
       await api.deleteItem(id);
       await refreshData();
     } catch (err) {
-      console.error('Delete error:', err);
+      console.warn('API sync warning for deleteItem (using optimistic state):', err);
     }
   };
 
-  // Wants Management
+  // Wants Management - Instant optimistic toggle + storage persistence
   const toggleWant = async (itemId: string) => {
+    if (!currentUser) return;
+    const exists = wants.some(w => w.studentId === currentUser.id && w.itemId === itemId);
+    const updated = exists
+      ? wants.filter(w => !(w.studentId === currentUser.id && w.itemId === itemId))
+      : [...wants, { studentId: currentUser.id, itemId }];
+
+    setWants(updated);
+    localStorage.setItem('swaploop_local_wants', JSON.stringify(updated));
+
     try {
       await api.toggleWant(itemId);
       await refreshData();
     } catch (err) {
-      console.error('Toggle want error:', err);
+      console.warn('API sync warning for toggleWant (using optimistic state):', err);
     }
   };
 
@@ -429,7 +552,31 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await refreshData();
       return res;
     } catch (err: any) {
-      return { success: false, message: err.message || 'Drop-off verification failed' };
+      // Local optimistic fallback for offline / GitHub Pages
+      const normalizedCode = dropoffCode.trim().toUpperCase();
+      let matched = false;
+      const updated = proposals.map(p => {
+        if (p.id === proposalId || p.members.some(m => m.dropoffCode.toUpperCase() === normalizedCode)) {
+          const updatedMembers = p.members.map(m => {
+            if (m.dropoffCode.toUpperCase() === normalizedCode) {
+              matched = true;
+              return { ...m, dropoffDone: true, contactNote: 'Item received · Just now' };
+            }
+            return m;
+          });
+          return { ...p, members: updatedMembers };
+        }
+        return p;
+      });
+
+      if (matched) {
+        setProposals(updated);
+        try {
+          localStorage.setItem('swaploop_local_proposals', JSON.stringify(updated));
+        } catch {}
+        return { success: true, message: `Drop-off code verified! Item deposited into physical escrow.` };
+      }
+      return { success: false, message: `Invalid drop-off code "${dropoffCode}". Please verify.` };
     }
   };
 
@@ -447,7 +594,40 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       return res;
     } catch (err: any) {
-      return { success: false, message: err.message || 'Pickup verification failed' };
+      // Local optimistic fallback for offline / GitHub Pages
+      const normalizedCode = pickupCode.trim().toUpperCase();
+      let matched = false;
+      let allDone = false;
+      const updated = proposals.map(p => {
+        if (p.id === proposalId || p.members.some(m => m.pickupCode.toUpperCase() === normalizedCode)) {
+          const updatedMembers = p.members.map(m => {
+            if (m.pickupCode.toUpperCase() === normalizedCode) {
+              matched = true;
+              return { ...m, pickupDone: true };
+            }
+            return m;
+          });
+          allDone = updatedMembers.every(m => m.pickupDone);
+          return { ...p, members: updatedMembers, status: allDone ? ('completed' as const) : p.status };
+        }
+        return p;
+      });
+
+      if (matched) {
+        setProposals(updated);
+        try {
+          localStorage.setItem('swaploop_local_proposals', JSON.stringify(updated));
+        } catch {}
+        if (allDone) {
+          confetti({
+            particleCount: 150,
+            spread: 90,
+            origin: { y: 0.5 }
+          });
+        }
+        return { success: true, message: allDone ? `All items picked up! Loop closed and completed.` : `Pickup code verified! Item handed over to student.` };
+      }
+      return { success: false, message: `Invalid pickup code "${pickupCode}".` };
     }
   };
 

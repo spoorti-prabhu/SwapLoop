@@ -13,8 +13,7 @@ import {
   Lock,
   Building2,
   Check,
-  X,
-  Heart
+  X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -28,8 +27,6 @@ export const Dashboard: React.FC = () => {
     acceptProposal,
     declineProposal,
     allUsers,
-    loadScenario,
-    currentScenario,
     setActiveTab,
     toggleWant,
     isItemInWants
@@ -583,13 +580,12 @@ export const Dashboard: React.FC = () => {
                 <div className="pt-3">
                   <button
                     onClick={() => toggleWant(item.id)}
-                    className={`w-full py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer ${
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center transition-all duration-200 cursor-pointer ${
                       inWants
                         ? 'bg-gradient-to-r from-[#f472b6] to-[#fb7185] text-white shadow-sm'
                         : 'bg-[#FFF7FA] hover:bg-pink-100 text-[#DE5B9B] border border-pink-200/80'
                     }`}
                   >
-                    <Heart className={`w-3.5 h-3.5 ${inWants ? 'fill-white text-white' : 'text-[#DE5B9B]'}`} />
                     <span className="text-[10px] uppercase tracking-wider">
                       {inWants ? 'In My Wants' : 'I Want This'}
                     </span>
@@ -598,60 +594,6 @@ export const Dashboard: React.FC = () => {
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* 4. SCENARIO SWITCHER & ADMIN QUICK TEST PANEL */}
-      <div className="p-6 rounded-3xl bg-white border border-pink-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Interactive Test Scenarios
-          </div>
-          <div className="text-sm font-bold text-slate-800 mt-0.5">
-            Demonstrate Drop Engine Algorithms:
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button
-            onClick={() => loadScenario('A')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold border transition-all ${
-              currentScenario === 'A'
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-700 border-pink-200 hover:bg-pink-50'
-            }`}
-          >
-            Scenario A (5 Students / 3-Loop)
-          </button>
-
-          <button
-            onClick={() => loadScenario('B')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold border transition-all ${
-              currentScenario === 'B'
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-700 border-pink-200 hover:bg-pink-50'
-            }`}
-          >
-            Scenario B (Free Gift Chain)
-          </button>
-
-          <button
-            onClick={() => loadScenario('C')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold border transition-all ${
-              currentScenario === 'C'
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-700 border-pink-200 hover:bg-pink-50'
-            }`}
-          >
-            Scenario C (Trust Restriction)
-          </button>
-
-          <button
-            onClick={() => loadScenario('C_TRUSTED')}
-            className="px-3.5 py-1.5 rounded-xl font-bold border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-all"
-          >
-            Scenario C (Trusted Unlock)
-          </button>
         </div>
       </div>
 

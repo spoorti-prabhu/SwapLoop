@@ -67,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'North Campus',
     'Downtown Campus',
     'Engineering Quad',
-    'Medical Center'
+    'Stanley'
   ];
 
   // Counts for badges

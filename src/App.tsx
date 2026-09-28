@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { SwapLoopProvider, useSwapLoop } from './context/SwapLoopContext';
 import { Sidebar } from './components/Sidebar';
-import { AdminControlBar } from './components/AdminControlBar';
 import { SettingsModal } from './components/SettingsModal';
 import { Dashboard } from './components/Dashboard';
 import { HomeHeroView } from './components/HomeHeroView';
@@ -41,28 +40,22 @@ const MainAppLayout: React.FC = () => {
     logout
   } = useSwapLoop();
 
-  const [isAdminBarVisible, setIsAdminBarVisible] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotifsOpen, setIsNotifsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isArchOpen, setIsArchOpen] = useState(false);
-  const [selectedCampus, setSelectedCampus] = useState('North Campus');
+  const [selectedCampus, setSelectedCampus] = useState(() => {
+    return localStorage.getItem('swaploop_selected_campus') || 'North Campus';
+  });
+
+  const handleSelectCampus = (campus: string) => {
+    setSelectedCampus(campus);
+    localStorage.setItem('swaploop_selected_campus', campus);
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
-
-  // Global F10 Hotkey Listener for Admin Presets Bar
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F10') {
-        e.preventDefault();
-        setIsAdminBarVisible((prev) => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   // Auth Guard: If user is not authenticated or currentUser is null, display the Sign-In screen
   if (!isAuthenticated || !currentUser) {
@@ -118,7 +111,7 @@ const MainAppLayout: React.FC = () => {
         <Sidebar
           onOpenSettings={() => setIsSettingsOpen(true)}
           selectedCampus={selectedCampus}
-          onSelectCampus={setSelectedCampus}
+          onSelectCampus={handleSelectCampus}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
@@ -135,7 +128,7 @@ const MainAppLayout: React.FC = () => {
               }}
               selectedCampus={selectedCampus}
               onSelectCampus={(camp) => {
-                setSelectedCampus(camp);
+                handleSelectCampus(camp);
                 setIsMobileMenuOpen(false);
               }}
               isCollapsed={false}
@@ -154,12 +147,6 @@ const MainAppLayout: React.FC = () => {
 
       {/* 2. MAIN APP CONTENT CONTAINER (Split-screen safe: flex-1 min-w-0) */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Admin Scenario Presets Bar (F10 Hotkey Toggleable) */}
-        <AdminControlBar
-          isVisible={isAdminBarVisible}
-          onToggleVisibility={() => setIsAdminBarVisible(false)}
-        />
-
         {/* Lightweight Top Navigation Rail */}
         <header className="h-16 border-b border-pink-100 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-4 flex-shrink-0 z-20">
           {/* Left: Mobile hamburger & Active Breadcrumb */}
@@ -182,23 +169,8 @@ const MainAppLayout: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: Quick actions, Role Switcher, Notifications, Admin F10 Pill, Sign Out */}
+          {/* Right: Quick actions, Role Switcher, Notifications, Sign Out */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {/* F10 Admin Hotkey Indicator Pill */}
-            <button
-              onClick={() => setIsAdminBarVisible(!isAdminBarVisible)}
-              className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                isAdminBarVisible
-                  ? 'bg-slate-900 text-pink-300 shadow-2xs'
-                  : 'bg-white hover:bg-pink-50 text-slate-600 border border-pink-200'
-              }`}
-              title="Toggle Admin Scenario Presets Bar (Hotkey: F10)"
-            >
-              <kbd className="px-1 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-pink-300">
-                F10
-              </kbd>
-              <span>{isAdminBarVisible ? 'Admin Bar On' : 'Admin Presets'}</span>
-            </button>
 
             {/* Trust Tier Badge */}
             {currentUser && (
@@ -300,7 +272,7 @@ const MainAppLayout: React.FC = () => {
             {activeTab === 'have' && <MyItemsView />}
             {activeTab === 'wants' && <MyWantsView />}
             {activeTab === 'wall' && <LoopWallView />}
-            {activeTab === 'desk' && <SwapDeskPortal />}
+            {activeTab === 'desk' && <SwapDeskPortal selectedCampus={selectedCampus} />}
             {activeTab === 'drop' && <TheDropView />}
             {activeTab === 'admin' && (
               <AdminView onOpenArchitecture={() => setIsArchOpen(true)} />
@@ -321,13 +293,6 @@ const MainAppLayout: React.FC = () => {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setIsArchOpen(true)}
-                className="text-[#db2777] hover:underline font-semibold cursor-pointer"
-              >
-                System Architecture
-              </button>
-              <span>•</span>
-              <button
                 onClick={logout}
                 className="text-rose-600 hover:underline font-semibold cursor-pointer"
               >
@@ -343,7 +308,7 @@ const MainAppLayout: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         selectedCampus={selectedCampus}
-        onSelectCampus={setSelectedCampus}
+        onSelectCampus={handleSelectCampus}
       />
       <NotificationDrawer isOpen={isNotifsOpen} onClose={() => setIsNotifsOpen(false)} />
       <TechArchitectureModal isOpen={isArchOpen} onClose={() => setIsArchOpen(false)} />
