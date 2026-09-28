@@ -11,7 +11,14 @@ import {
   ArrowRight,
   Sparkles,
   Search,
-  ExternalLink
+  ExternalLink,
+  Server,
+  Database,
+  Clock,
+  ShieldCheck,
+  ArrowDown,
+  Activity,
+  Lock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -19,7 +26,7 @@ interface AdminViewProps {
   onOpenArchitecture?: () => void;
 }
 
-export const AdminView: React.FC<AdminViewProps> = ({ onOpenArchitecture }) => {
+export const AdminView: React.FC<AdminViewProps> = ({ onOpenArchitecture: _onOpenArchitecture }) => {
   const {
     allUsers,
     items,
@@ -31,7 +38,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onOpenArchitecture }) => {
     setActiveTab
   } = useSwapLoop();
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'students' | 'desk' | 'cycles'>('students');
+  const [activeAdminTab, setActiveAdminTab] = useState<'students' | 'desk' | 'cycles' | 'architecture'>('students');
   const [searchTerm, setSearchTerm] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
   const [triggerResult, setTriggerResult] = useState<string | null>(null);
@@ -86,15 +93,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ onOpenArchitecture }) => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {onOpenArchitecture && (
-              <button
-                onClick={onOpenArchitecture}
-                className="px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs backdrop-blur-md border border-white/20 transition-all flex items-center gap-2 cursor-pointer shadow-sm"
-              >
-                <Cpu className="w-4 h-4 text-pink-400" />
-                <span>System Architecture</span>
-              </button>
-            )}
+            <button
+              onClick={() => setActiveAdminTab('architecture')}
+              className={`px-4 py-2.5 rounded-2xl font-bold text-xs backdrop-blur-md border transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
+                activeAdminTab === 'architecture'
+                  ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-400'
+                  : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+              }`}
+            >
+              <Cpu className="w-4 h-4 text-pink-400" />
+              <span>Interactive Tech Architecture</span>
+            </button>
 
             <button
               onClick={handleRunDrop}
@@ -190,6 +199,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ onOpenArchitecture }) => {
         >
           <RotateCw className="w-4 h-4 text-purple-500" />
           <span>Cycle Diagnostics ({proposals.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveAdminTab('architecture')}
+          className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeAdminTab === 'architecture'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-pink-100'
+          }`}
+        >
+          <Cpu className="w-4 h-4 text-pink-500" />
+          <span>Interactive Tech Architecture (Section 32)</span>
         </button>
       </div>
 
@@ -458,6 +479,136 @@ export const AdminView: React.FC<AdminViewProps> = ({ onOpenArchitecture }) => {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* 3. SUB-TAB CONTENT 4: INTERACTIVE TECH ARCHITECTURE */}
+      {activeAdminTab === 'architecture' && (
+        <div className="bg-white p-6 sm:p-10 rounded-3xl border border-pink-100 shadow-sm space-y-8 animate-fadeIn">
+          <div>
+            <div className="text-xs uppercase font-extrabold tracking-widest text-[#db2777] flex items-center gap-1.5 mb-1">
+              <Cpu className="w-4 h-4" />
+              <span>System & Tech Architecture (Section 32)</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              How SwapLoop Works Under the Hood
+            </h2>
+            <p className="text-sm text-slate-500 mt-1 max-w-3xl leading-relaxed">
+              SwapLoop replaces prices and bargaining with a directed-graph matching engine that computes closed circular cycles and multi-party gift chains across campus dorms.
+            </p>
+          </div>
+
+          {/* Interactive Architecture Flow Diagram */}
+          <div className="space-y-6">
+            {/* Layer 1: Client */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-[#fff7f9] border border-pink-200 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3 font-bold text-slate-900 text-sm">
+                  <div className="w-9 h-9 rounded-xl bg-white text-[#db2777] flex items-center justify-center shadow-sm">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <span>1. Frontend Client Layer (React 18 + Vite + Tailwind CSS)</span>
+                </div>
+                <span className="text-[11px] font-mono font-bold text-pink-600 bg-white px-3 py-1 rounded-full border border-pink-100">
+                  Port 5173
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed pl-12">
+                Blush mist design system (`#FFF7F9`), reactive auth state, strict blind proposals UI masking, live countdowns, micro-interactions, and role switching (`[Student]`, `[Desk Operator]`, `[Admin]`).
+              </p>
+            </div>
+
+            {/* Flow Connector Arrow */}
+            <div className="flex justify-center -my-3">
+              <div className="w-8 h-8 rounded-full bg-white border border-pink-200 shadow-sm flex items-center justify-center text-pink-500 animate-bounce">
+                <ArrowDown className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Layer 2: API Gateway */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3 font-bold text-slate-900 text-sm">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shadow-sm">
+                    <Server className="w-5 h-5" />
+                  </div>
+                  <span>2. REST API & Authorization Layer (Node.js + Express)</span>
+                </div>
+                <span className="text-[11px] font-mono font-bold text-slate-600 bg-slate-50 px-3 py-1 rounded-full border border-slate-200">
+                  Port 3001
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pl-12 pt-2 text-xs">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <strong className="text-slate-900 block mb-1 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-pink-500" /> Blind Proposal Sanitizer
+                  </strong>
+                  <span>Strips real names and contact notes from network payload until proposal is sealed (F7).</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <strong className="text-slate-900 block mb-1 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Trust Rule Validator
+                  </strong>
+                  <span>Enforces T4 value bands: New (Low), Trusted (Low+Med), Veteran (All).</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <strong className="text-slate-900 block mb-1 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-purple-600" /> Daily Drop Cron
+                  </strong>
+                  <span>Scheduled background job executes matching daily at 5:00 PM.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Flow Connector Arrow */}
+            <div className="flex justify-center -my-3">
+              <div className="w-8 h-8 rounded-full bg-white border border-pink-200 shadow-sm flex items-center justify-center text-pink-500 animate-bounce">
+                <ArrowDown className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Layer 3: Engine, Escrow & Database */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-200 shadow-sm">
+                <div className="flex items-center gap-2 font-bold text-slate-900 text-sm mb-2">
+                  <Cpu className="w-4 h-4 text-pink-600" />
+                  <span>3A. Swap Engine Pipeline</span>
+                </div>
+                <ul className="text-xs text-slate-700 space-y-1.5 pl-5 list-disc">
+                  <li><strong>Cycle Finder:</strong> DFS search for closed loops ($k = 3\dots 5$).</li>
+                  <li><strong>Gift Chain Finder:</strong> Traces pay-it-forward free gift cascades.</li>
+                  <li><strong>Trust T4 Filter:</strong> Disqualifies loops with value violations.</li>
+                  <li><strong>Optimizer:</strong> Max-independent set maximizes students satisfied.</li>
+                </ul>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200 shadow-sm">
+                <div className="flex items-center gap-2 font-bold text-slate-900 text-sm mb-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>3B. Physical Escrow Terminal</span>
+                </div>
+                <ul className="text-xs text-slate-700 space-y-1.5 pl-5 list-disc">
+                  <li><strong>Drop-off Auth:</strong> Single-use 6-digit verification codes.</li>
+                  <li><strong>Time Window:</strong> Evening window locked outside 5:00–5:30 PM.</li>
+                  <li><strong>Locked Pickup:</strong> Pickup codes released only when all items are at desk.</li>
+                  <li><strong>Anti-Ghosting:</strong> 24h deadline automatic item return codes.</li>
+                </ul>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-2 font-bold text-slate-900 text-sm mb-2">
+                  <Database className="w-4 h-4 text-indigo-600" />
+                  <span>3C. Persistent Storage (SQLite)</span>
+                </div>
+                <div className="text-xs text-slate-600 space-y-1.5 pl-2">
+                  <div>Path: <code className="text-pink-600 font-mono font-bold text-[11px]">server/data/swaploop.db</code></div>
+                  <div className="text-[11px] text-slate-500 leading-relaxed">
+                    Stores users, items, wants, proposals, single-use codes, declined signatures, reports, and scenario states with full persistence across server restarts.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

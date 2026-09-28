@@ -29,7 +29,7 @@ export const SwapDeskPortal: React.FC<SwapDeskPortalProps> = ({ selectedCampus =
 
   // Filter proposals eligible for Swap Desk
   const deskProposals = proposals.filter(
-    p => p.status === 'sealed' || p.status === 'completed' || p.status === 'failed' || p.status === 'proposed'
+    p => p.status === 'sealed' || p.status === 'completed' || p.status === 'failed' || p.status === 'proposed' || p.status === 'eligible'
   );
 
   const [selectedProposalId, setSelectedProposalId] = useState<string>(

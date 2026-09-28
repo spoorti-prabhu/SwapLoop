@@ -19,6 +19,10 @@ export function generate6CharCode(): string {
   return result;
 }
 
+export function generate6DigitCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 export interface CandidateCycle {
   type: 'loop' | 'gift_chain';
   students: string[]; // student IDs in cycle order
@@ -128,7 +132,7 @@ export function runDropMatchingEngine(
 
       const edges = outgoingEdges.get(currentStudent) || [];
       for (const edge of edges) {
-        if (edge.toStudentId === startStudent && pathStudents.length >= 2) {
+        if (edge.toStudentId === startStudent && pathStudents.length >= 3 && pathStudents.length <= 5) {
           // Found a cycle!
           const cycleStudents = [...pathStudents];
           const cycleItems = [...pathItems, edge.itemId];
@@ -276,25 +280,30 @@ export function runDropMatchingEngine(
       // receives item from student (i - 1 + n) % n
       const prevIndex = (i - 1 + n) % n;
       const receivesItemId = cycle.items[prevIndex];
+      const studentUser = userMap.get(studentId);
 
       members.push({
         studentId,
         codename: `Swapper ${i + 1}`,
+        name: studentUser?.name || `Swapper ${i + 1}`,
+        contactNote: 'Awaiting item deposit',
         givesItemId,
         receivesItemId,
-        accepted: false,
-        dropoffCode: generate6CharCode(),
+        accepted: true,
+        handoverChoice: 'desk',
+        dropoffCode: generate6DigitCode(),
         dropoffDone: false,
-        pickupCode: generate6CharCode(),
+        pickupCode: generate6DigitCode(),
         pickupDone: false
       });
     }
 
     generatedProposals.push({
-      id: `prop-${now}-${Math.random().toString(36).substr(2, 6)}`,
+      id: `0${Math.floor(100 + Math.random() * 900)}`,
       type: cycle.type,
       members,
-      status: 'proposed',
+      status: 'eligible',
+      handoverMethod: 'desk',
       createdAt: now,
       expiresAt: now + FIVE_MINUTES_MS,
       signature: cycle.signature

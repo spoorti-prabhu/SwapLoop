@@ -15,8 +15,11 @@ import {
 import {
   SEED_USERS_SCENARIO_A,
   SEED_ITEMS_SCENARIO_A,
-  SEED_WANTS_SCENARIO_A
+  SEED_WANTS_SCENARIO_A,
+  SEED_USER_KIRAN,
+  SEED_ITEM_KIRAN_GIFT
 } from '../data/seedData';
+import { runDropMatchingEngine } from '../engine/dropMatchingEngine';
 import { api, setAuthUserId, getAuthUserId } from '../services/api';
 
 interface SwapLoopContextType {
@@ -82,7 +85,31 @@ interface SwapLoopContextType {
 const SwapLoopContext = createContext<SwapLoopContextType | undefined>(undefined);
 
 export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(SEED_USERS_SCENARIO_A);
+  const getInitialUsers = (): User[] => {
+    try {
+      const stored = localStorage.getItem('swaploop_local_users');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return SEED_USERS_SCENARIO_A.map(u => {
+      if (u.id === 'user-arjun') return { ...u, currentDropCode: '482109' };
+      if (u.id === 'user-bhavya') return { ...u, currentDropCode: '629401' };
+      if (u.id === 'user-chetan') return { ...u, currentDropCode: '839201' };
+      return u;
+    });
+  };
+
+  const getInitialStats = (): LoopWallStats => {
+    try {
+      const stored = localStorage.getItem('swaploop_local_stats');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return { totalRehomed: 24, loopsCompleted: 8, longestGiftChain: 5 };
+  };
+
+  const [users, setUsers] = useState<User[]>(getInitialUsers);
 
   const initialAuthUserId = getAuthUserId();
   const initialAuthenticated = (localStorage.getItem('swaploop_authenticated') === 'true' || !!initialAuthUserId);
@@ -187,7 +214,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [wants, setWants] = useState<WantRelation[]>(getInitialWants);
   const [proposals, setProposals] = useState<Proposal[]>(getInitialProposals);
   const [currentScenario, setCurrentScenario] = useState<string>('A');
-  const [stats, setStats] = useState<LoopWallStats>({ totalRehomed: 24, loopsCompleted: 8, longestGiftChain: 5 });
+  const [stats, setStats] = useState<LoopWallStats>(getInitialStats);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [dropCountdownSeconds, setDropCountdownSeconds] = useState<number>(getSecondsUntilNextDrop);
 
@@ -504,8 +531,70 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         scenarioNote: res.scenarioNote
       };
     } catch (err: any) {
-      console.error('Trigger drop error:', err);
-      return { matchedCount: 0, scenarioNote: err.message };
+      console.warn('Backend triggerDrop unavailable, executing client matching engine fallback:', err);
+      // Client-side directed graph cycle detection
+      const activeProposalItemIds = new Set<string>();
+      proposals.forEach(p => {
+        if (p.status === 'sealed' || p.status === 'proposed' || p.status === 'eligible') {
+          p.members.forEach(m => {
+            activeProposalItemIds.add(m.givesItemId);
+            activeProposalItemIds.add(m.receivesItemId);
+          });
+        }
+      });
+
+      const matchedProps = runDropMatchingEngine(
+        users,
+        items,
+        wants,
+        new Set<string>(),
+        activeProposalItemIds
+      );
+
+      if (matchedProps.length > 0) {
+        const updatedUsers = [...users];
+        const newEligibleProposals = matchedProps.map(p => {
+          const eligibleProposal: Proposal = {
+            ...p,
+            status: 'eligible',
+            handoverMethod: 'desk'
+          };
+          eligibleProposal.members.forEach(m => {
+            const uIdx = updatedUsers.findIndex(u => u.id === m.studentId);
+            if (uIdx !== -1) {
+              updatedUsers[uIdx] = {
+                ...updatedUsers[uIdx],
+                currentDropCode: m.dropoffCode
+              };
+            }
+          });
+          return eligibleProposal;
+        });
+
+        const merged = [...newEligibleProposals, ...proposals];
+        setProposals(merged);
+        setUsers(updatedUsers);
+        try {
+          localStorage.setItem('swaploop_local_proposals', JSON.stringify(merged));
+          localStorage.setItem('swaploop_local_users', JSON.stringify(updatedUsers));
+        } catch {}
+
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+
+        return {
+          matchedCount: newEligibleProposals.length,
+          scenarioNote: `Formed ${newEligibleProposals.length} closed loop(s). Verification drop-off codes generated for swappers!`
+        };
+      } else {
+        return {
+          matchedCount: 0,
+          scenarioNote: 'No new closed loops detected matching current student wants & trust tiers.'
+        };
+      }
     }
   };
 
@@ -553,18 +642,24 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return res;
     } catch (err: any) {
       // Local optimistic fallback for offline / GitHub Pages
-      const normalizedCode = dropoffCode.trim().toUpperCase();
+      const normalizedCode = dropoffCode.trim().replace(/\s+/g, '').toUpperCase();
       let matched = false;
       const updated = proposals.map(p => {
-        if (p.id === proposalId || p.members.some(m => m.dropoffCode.toUpperCase() === normalizedCode)) {
+        if (p.id === proposalId || p.members.some(m => m.dropoffCode.replace(/\s+/g, '').toUpperCase() === normalizedCode)) {
           const updatedMembers = p.members.map(m => {
-            if (m.dropoffCode.toUpperCase() === normalizedCode) {
+            if (m.dropoffCode.replace(/\s+/g, '').toUpperCase() === normalizedCode) {
               matched = true;
-              return { ...m, dropoffDone: true, contactNote: 'Item received · Just now' };
+              const timeStr = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+              return { ...m, dropoffDone: true, contactNote: `Item received · ${timeStr}` };
             }
             return m;
           });
-          return { ...p, members: updatedMembers };
+          const allDropped = updatedMembers.every(m => m.dropoffDone);
+          return {
+            ...p,
+            members: updatedMembers,
+            status: allDropped ? ('sealed' as const) : p.status
+          };
         }
         return p;
       });
@@ -586,6 +681,15 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await refreshData();
 
       if (res.isAllCompleted) {
+        const newStats = {
+          ...stats,
+          loopsCompleted: stats.loopsCompleted + 1,
+          totalRehomed: stats.totalRehomed + 3
+        };
+        setStats(newStats);
+        try {
+          localStorage.setItem('swaploop_local_stats', JSON.stringify(newStats));
+        } catch {}
         confetti({
           particleCount: 150,
           spread: 90,
@@ -595,19 +699,21 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return res;
     } catch (err: any) {
       // Local optimistic fallback for offline / GitHub Pages
-      const normalizedCode = pickupCode.trim().toUpperCase();
+      const normalizedCode = pickupCode.trim().replace(/\s+/g, '').toUpperCase();
       let matched = false;
       let allDone = false;
+      let completedMembersCount = 3;
       const updated = proposals.map(p => {
-        if (p.id === proposalId || p.members.some(m => m.pickupCode.toUpperCase() === normalizedCode)) {
+        if (p.id === proposalId || p.members.some(m => m.pickupCode.replace(/\s+/g, '').toUpperCase() === normalizedCode)) {
           const updatedMembers = p.members.map(m => {
-            if (m.pickupCode.toUpperCase() === normalizedCode) {
+            if (m.pickupCode.replace(/\s+/g, '').toUpperCase() === normalizedCode) {
               matched = true;
               return { ...m, pickupDone: true };
             }
             return m;
           });
           allDone = updatedMembers.every(m => m.pickupDone);
+          completedMembersCount = updatedMembers.length;
           return { ...p, members: updatedMembers, status: allDone ? ('completed' as const) : p.status };
         }
         return p;
@@ -619,13 +725,22 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           localStorage.setItem('swaploop_local_proposals', JSON.stringify(updated));
         } catch {}
         if (allDone) {
+          const newStats = {
+            ...stats,
+            loopsCompleted: stats.loopsCompleted + 1,
+            totalRehomed: stats.totalRehomed + completedMembersCount
+          };
+          setStats(newStats);
+          try {
+            localStorage.setItem('swaploop_local_stats', JSON.stringify(newStats));
+          } catch {}
           confetti({
             particleCount: 150,
             spread: 90,
             origin: { y: 0.5 }
           });
         }
-        return { success: true, message: allDone ? `All items picked up! Loop closed and completed.` : `Pickup code verified! Item handed over to student.` };
+        return { success: true, message: allDone ? `All items picked up! Loop closed and marked COMPLETED on Loop Wall.` : `Pickup code verified! Item handed over to student.` };
       }
       return { success: false, message: `Invalid pickup code "${pickupCode}".` };
     }
@@ -646,17 +761,81 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await api.loadScenario(scenario);
       await refreshData();
     } catch (err) {
-      console.error('Load scenario error:', err);
+      console.warn('Backend loadScenario unavailable, loading client scenario state:', err);
+      setCurrentScenario(scenario);
+      if (scenario === 'A' || scenario === 'default') {
+        const resetUsers = SEED_USERS_SCENARIO_A.map(u => {
+          if (u.id === 'user-arjun') return { ...u, currentDropCode: '482109' };
+          if (u.id === 'user-bhavya') return { ...u, currentDropCode: '629401' };
+          if (u.id === 'user-chetan') return { ...u, currentDropCode: '839201' };
+          return u;
+        });
+        setUsers(resetUsers);
+        setItems(SEED_ITEMS_SCENARIO_A);
+        setWants(SEED_WANTS_SCENARIO_A);
+        setProposals([DEFAULT_DEMO_PROPOSAL]);
+        try {
+          localStorage.setItem('swaploop_local_users', JSON.stringify(resetUsers));
+          localStorage.setItem('swaploop_local_items', JSON.stringify(SEED_ITEMS_SCENARIO_A));
+          localStorage.setItem('swaploop_local_wants', JSON.stringify(SEED_WANTS_SCENARIO_A));
+          localStorage.setItem('swaploop_local_proposals', JSON.stringify([DEFAULT_DEMO_PROPOSAL]));
+        } catch {}
+      } else if (scenario === 'B') {
+        const scenarioBUsers = [...SEED_USERS_SCENARIO_A, SEED_USER_KIRAN];
+        const scenarioBItems = [...SEED_ITEMS_SCENARIO_A, SEED_ITEM_KIRAN_GIFT];
+        const scenarioBWants = [
+          ...SEED_WANTS_SCENARIO_A,
+          { studentId: 'user-arjun', itemId: 'item-study-table' }
+        ];
+        setUsers(scenarioBUsers);
+        setItems(scenarioBItems);
+        setWants(scenarioBWants);
+        setProposals([DEFAULT_DEMO_PROPOSAL]);
+        try {
+          localStorage.setItem('swaploop_local_users', JSON.stringify(scenarioBUsers));
+          localStorage.setItem('swaploop_local_items', JSON.stringify(scenarioBItems));
+          localStorage.setItem('swaploop_local_wants', JSON.stringify(scenarioBWants));
+          localStorage.setItem('swaploop_local_proposals', JSON.stringify([DEFAULT_DEMO_PROPOSAL]));
+        } catch {}
+      } else if (scenario === 'C') {
+        const scenarioCItems = SEED_ITEMS_SCENARIO_A.map(i =>
+          i.id === 'item-bicycle' ? { ...i, valueBand: 'Medium' as const } : i
+        );
+        setUsers(SEED_USERS_SCENARIO_A);
+        setItems(scenarioCItems);
+        setWants(SEED_WANTS_SCENARIO_A);
+        setProposals([]);
+        try {
+          localStorage.setItem('swaploop_local_users', JSON.stringify(SEED_USERS_SCENARIO_A));
+          localStorage.setItem('swaploop_local_items', JSON.stringify(scenarioCItems));
+          localStorage.setItem('swaploop_local_wants', JSON.stringify(SEED_WANTS_SCENARIO_A));
+          localStorage.setItem('swaploop_local_proposals', JSON.stringify([]));
+        } catch {}
+      } else if (scenario === 'C_TRUSTED') {
+        const trustedUsers = SEED_USERS_SCENARIO_A.map(u =>
+          (u.id === 'user-arjun' || u.id === 'user-bhavya')
+            ? { ...u, trustLevel: 'Trusted' as const }
+            : u
+        );
+        const scenarioCItems = SEED_ITEMS_SCENARIO_A.map(i =>
+          i.id === 'item-bicycle' ? { ...i, valueBand: 'Medium' as const } : i
+        );
+        setUsers(trustedUsers);
+        setItems(scenarioCItems);
+        setWants(SEED_WANTS_SCENARIO_A);
+        setProposals([DEFAULT_DEMO_PROPOSAL]);
+        try {
+          localStorage.setItem('swaploop_local_users', JSON.stringify(trustedUsers));
+          localStorage.setItem('swaploop_local_items', JSON.stringify(scenarioCItems));
+          localStorage.setItem('swaploop_local_wants', JSON.stringify(SEED_WANTS_SCENARIO_A));
+          localStorage.setItem('swaploop_local_proposals', JSON.stringify([DEFAULT_DEMO_PROPOSAL]));
+        } catch {}
+      }
     }
   };
 
   const setScenario = async (scenario: string) => {
-    try {
-      await api.loadScenario(scenario);
-      await refreshData();
-    } catch (err) {
-      console.error('Set scenario error:', err);
-    }
+    await loadScenario(scenario as any);
   };
 
   const markNotificationRead = async (id: string) => {

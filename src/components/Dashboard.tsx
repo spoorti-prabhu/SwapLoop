@@ -20,6 +20,7 @@ import confetti from 'canvas-confetti';
 export const Dashboard: React.FC = () => {
   const {
     currentUser,
+    currentRole,
     items,
     proposals,
     dropCountdownSeconds,
@@ -36,6 +37,16 @@ export const Dashboard: React.FC = () => {
   const [selectedHandover, setSelectedHandover] = useState<'desk' | 'meet'>('desk');
   const [isTriggering, setIsTriggering] = useState(false);
   const [matchResultNote, setMatchResultNote] = useState<string | null>(null);
+  const [hasConfirmedParticipation, setHasConfirmedParticipation] = useState(false);
+
+  // Check 5:00 PM - 5:30 PM (17:00 - 17:30) Drop window
+  const checkDropWindow = () => {
+    const d = new Date();
+    const hour = d.getHours();
+    const min = d.getMinutes();
+    return hour === 17 && min <= 30;
+  };
+  const isDropWindowActive = checkDropWindow();
 
   if (!currentUser) return null;
 
@@ -49,7 +60,7 @@ export const Dashboard: React.FC = () => {
 
   // Find active proposal for the logged in user
   const activeProposal = proposals.find(p =>
-    (p.status === 'proposed' || p.status === 'sealed' || p.status === 'completed') &&
+    (p.status === 'proposed' || p.status === 'sealed' || p.status === 'eligible' || p.status === 'completed') &&
     p.members.some(m => m.studentId === currentUser.id)
   ) || proposals[0];
 
@@ -188,14 +199,46 @@ export const Dashboard: React.FC = () => {
               <span>List an Item to Swap</span>
             </button>
 
-            <button
-              onClick={handleTriggerDrop}
-              disabled={isTriggering}
-              className="px-5 py-3 rounded-2xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-60"
-            >
-              <RotateCw className={`w-4 h-4 text-[#DE5B9B] ${isTriggering ? 'animate-spin' : ''}`} />
-              <span>{isTriggering ? 'Matching...' : '⚡ Trigger The Drop'}</span>
-            </button>
+            {currentRole === 'Student' ? (
+              isDropWindowActive ? (
+                <button
+                  onClick={() => {
+                    setHasConfirmedParticipation(true);
+                    confetti({
+                      particleCount: 60,
+                      spread: 70,
+                      origin: { y: 0.6 }
+                    });
+                  }}
+                  className={`px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
+                    hasConfirmedParticipation
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>
+                    {hasConfirmedParticipation
+                      ? '✓ Confirmed in 5:00 PM Drop'
+                      : '✓ Confirm Participation in 5:00 PM Drop'}
+                  </span>
+                </button>
+              ) : (
+                <div className="px-4 py-3 rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs select-none">
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>🔒 Drop Window Locked • Next Drop opens at 5:00 PM (17:00–17:30)</span>
+                </div>
+              )
+            ) : (
+              <button
+                onClick={handleTriggerDrop}
+                disabled={isTriggering}
+                className="px-5 py-3 rounded-2xl bg-white hover:bg-pink-50 text-slate-800 border border-pink-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-60"
+              >
+                <RotateCw className={`w-4 h-4 text-[#DE5B9B] ${isTriggering ? 'animate-spin' : ''}`} />
+                <span>{isTriggering ? 'Matching...' : '⚡ Trigger The Drop'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -438,11 +481,11 @@ export const Dashboard: React.FC = () => {
                   </>
                 )}
 
-                {/* Sealed State: Show Drop-off & Pickup Codes */}
-                {activeProposal.status === 'sealed' && userMemberRecord && (
+                {/* Sealed or Eligible State: Show Drop-off & Pickup Codes */}
+                {(activeProposal.status === 'sealed' || activeProposal.status === 'eligible') && userMemberRecord && (
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="px-3.5 py-1.5 rounded-xl bg-slate-900 text-white font-mono text-xs font-bold flex items-center gap-2">
-                      <span className="text-pink-400">Drop-off Code:</span>
+                      <span className="text-pink-400">Your Drop-off Code:</span>
                       <span className="tracking-widest text-emerald-400">{userMemberRecord.dropoffCode}</span>
                     </div>
 

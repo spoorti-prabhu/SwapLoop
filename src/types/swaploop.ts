@@ -26,6 +26,7 @@ export interface User {
   emailVerified: boolean;
   role: UserRole;
   completedSwapsCount: number;
+  currentDropCode?: string;
 }
 
 export interface Item {
@@ -67,6 +68,7 @@ export interface ProposalMember {
 export type ProposalStatus = 
   | 'proposed' 
   | 'sealed' 
+  | 'eligible'
   | 'declined' 
   | 'expired' 
   | 'completed' 

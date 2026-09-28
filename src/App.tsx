@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SwapLoopProvider, useSwapLoop } from './context/SwapLoopContext';
 import { Sidebar } from './components/Sidebar';
 import { SettingsModal } from './components/SettingsModal';
@@ -12,7 +12,7 @@ import { SwapDeskPortal } from './components/SwapDeskPortal';
 import { TheDropView } from './components/TheDropView';
 import { AuthModal } from './components/AuthModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
-import { TechArchitectureModal } from './components/TechArchitectureModal';
+import { AdminControlBar } from './components/AdminControlBar';
 import { LoginPage } from './components/LoginPage';
 import { AdminView } from './components/AdminView';
 import { GlitterCursor } from './components/GlitterCursor';
@@ -45,7 +45,22 @@ const MainAppLayout: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotifsOpen, setIsNotifsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isArchOpen, setIsArchOpen] = useState(false);
+  const [isAdminBarVisible, setIsAdminBarVisible] = useState(true);
+
+  // F10 hotkey listener for Admin and Desk Operator to toggle scenario presets
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F10') {
+        e.preventDefault();
+        if (currentRole === 'Admin' || currentRole === 'Desk Operator') {
+          setIsAdminBarVisible((prev) => !prev);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentRole]);
+
   const [selectedCampus, setSelectedCampus] = useState(() => {
     return localStorage.getItem('swaploop_selected_campus') || 'North Campus';
   });
@@ -147,6 +162,14 @@ const MainAppLayout: React.FC = () => {
 
       {/* 2. MAIN APP CONTENT CONTAINER (Split-screen safe: flex-1 min-w-0) */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        {/* Admin Scenario Presets Bar (strictly hidden from Students, toggleable via F10) */}
+        {(currentRole === 'Admin' || currentRole === 'Desk Operator') && (
+          <AdminControlBar
+            isVisible={isAdminBarVisible}
+            onToggleVisibility={() => setIsAdminBarVisible(false)}
+          />
+        )}
+
         {/* Lightweight Top Navigation Rail */}
         <header className="h-16 border-b border-pink-100 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-4 flex-shrink-0 z-20">
           {/* Left: Mobile hamburger & Active Breadcrumb */}
@@ -262,21 +285,15 @@ const MainAppLayout: React.FC = () => {
         <main className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 scrollbar-thin">
           <div className="max-w-6xl mx-auto w-full min-w-0">
             {activeTab === 'dashboard' && <Dashboard />}
-            {activeTab === 'how_it_works' && (
-              <HomeHeroView onOpenArchitecture={() => setIsArchOpen(true)} />
-            )}
-            {activeTab === 'home' && (
-              <HomeHeroView onOpenArchitecture={() => setIsArchOpen(true)} />
-            )}
+            {activeTab === 'how_it_works' && <HomeHeroView />}
+            {activeTab === 'home' && <HomeHeroView />}
             {activeTab === 'browse' && <BrowseItemsView />}
             {activeTab === 'have' && <MyItemsView />}
             {activeTab === 'wants' && <MyWantsView />}
             {activeTab === 'wall' && <LoopWallView />}
             {activeTab === 'desk' && <SwapDeskPortal selectedCampus={selectedCampus} />}
             {activeTab === 'drop' && <TheDropView />}
-            {activeTab === 'admin' && (
-              <AdminView onOpenArchitecture={() => setIsArchOpen(true)} />
-            )}
+            {activeTab === 'admin' && <AdminView />}
           </div>
         </main>
 
@@ -311,7 +328,6 @@ const MainAppLayout: React.FC = () => {
         onSelectCampus={handleSelectCampus}
       />
       <NotificationDrawer isOpen={isNotifsOpen} onClose={() => setIsNotifsOpen(false)} />
-      <TechArchitectureModal isOpen={isArchOpen} onClose={() => setIsArchOpen(false)} />
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </div>
   );
