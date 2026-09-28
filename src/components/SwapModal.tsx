@@ -55,7 +55,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               Swap Offer Sent!
             </h3>
             <p className="text-sm text-[#6F6577] max-w-sm mx-auto">
-              We notified <span className="font-semibold text-[#1D1722]">{item.ownerName}</span>. Once accepted, you'll finalize your exchange at <span className="font-semibold text-[#DE5B9B]">{selectedLocation}</span>.
+              We notified <span className="font-semibold text-[#1D1722]">the owner (identity protected)</span>. Once accepted, you'll finalize your exchange at <span className="font-semibold text-[#DE5B9B]">{selectedLocation}</span>.
             </p>
           </div>
         ) : (

@@ -7,7 +7,9 @@ export type ItemCategory =
   | 'Electronics'
   | 'Stationery'
   | 'Furniture'
-  | 'Hostel Gear';
+  | 'Hostel Gear'
+  | 'Lab Gear'
+  | 'Clothing';
 
 export type ItemCondition = 'Like New' | 'Good' | 'Fair';
 
@@ -33,6 +35,7 @@ export interface Item {
   category: ItemCategory;
   condition: ItemCondition;
   valueBand: ValueBand;
+  imageUrl?: string;
   isFreeGift: boolean;
   isLockedInProposal?: boolean;
   createdAt: number;

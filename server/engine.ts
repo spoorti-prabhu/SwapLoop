@@ -132,7 +132,7 @@ export async function runServerDropMatchingEngine(): Promise<{
 
     const edges = outgoingEdges.get(currentStudent) || [];
     for (const edge of edges) {
-      if (edge.toStudentId === startStudent && pathStudents.length >= 2) {
+      if (edge.toStudentId === startStudent && pathStudents.length >= 3) {
         const cycleStudents = [...pathStudents];
         const cycleItems = [...pathItems, edge.itemId];
         const sig = getCycleSignature(cycleStudents, cycleItems);
@@ -204,7 +204,7 @@ export async function runServerDropMatchingEngine(): Promise<{
           }
         }
 
-        if (chainStudents.length >= 2) {
+        if (chainStudents.length >= 3) {
           const sig = `GIFT_CHAIN:${chainStudents.join('->')}:${chainItems.join('->')}`;
           if (!declinedSignatures.has(sig)) {
             candidateLoops.push({
@@ -357,7 +357,7 @@ export async function runServerDropMatchingEngine(): Promise<{
       // Add Notification
       await run(`
         INSERT INTO notifications (id, user_id, title, message, type, read, created_at)
-        VALUES (?, ?, '🎉 New Blind Proposal Generated!', 'A swap loop has formed in The Drop! You give an item and receive an item you want. Review within 5 minutes.', 'proposal', 0, ?)
+        VALUES (?, ?, '🎉 Proposals Ready!', 'Your SwapLoop proposals are ready. You give an item and receive an item you want. Review within 5 minutes.', 'proposal', 0, ?)
       `, [`notif-${now}-${Math.random().toString(36).substr(2, 4)}`, studentId, now]);
     }
 
@@ -370,11 +370,19 @@ export async function runServerDropMatchingEngine(): Promise<{
 
   let scenarioNote = `Created ${createdCount} proposal loop(s).`;
   if (activeScenario === 'A') {
-    scenarioNote += ' Scenario A: 3-student loop (Arjun -> Bhavya -> Chetan) prioritized over 2-student loop (Arjun -> Divya) to maximize students satisfied.';
+    scenarioNote = createdCount > 0
+      ? 'Scenario A: 3-student loop (Arjun -> Bhavya -> Chetan) successfully matched under 3–5 member loop rule. (Former 2-student loop prohibited).'
+      : 'Scenario A: No valid loop formed.';
   } else if (activeScenario === 'B') {
-    scenarioNote += ' Scenario B: Free Gift Chain successfully built across students!';
+    scenarioNote = createdCount > 0
+      ? 'Scenario B: Free Gift Chain successfully built across students! Final receiver item passes forward as new free gift.'
+      : 'Scenario B: No valid gift chain found.';
   } else if (activeScenario === 'C') {
-    scenarioNote += " Scenario C: Bhavya's bike (Medium) disqualified from 3-student loop under Trust T4. 2-student loop (Arjun -> Divya) proposed instead!";
+    if (createdCount === 0) {
+      scenarioNote = 'Scenario C: No valid loop found! Bhavya’s Bicycle (Medium value) is disqualified under Trust T4 because Arjun & Bhavya are New tier. 2-person loops are prohibited, so no 3–5 student loop is possible.';
+    } else {
+      scenarioNote = 'Scenario C (Trusted): Arjun & Bhavya promoted to Trusted tier! Bhavya’s Medium bike is now eligible and the 3-student loop (Arjun -> Bhavya -> Chetan) was successfully created!';
+    }
   }
 
   return { createdProposalsCount: createdCount, scenarioNote };

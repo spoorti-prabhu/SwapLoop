@@ -1,10 +1,14 @@
 import { ItemCategory, ItemCondition, ValueBand } from '../types/swaploop';
 
-let currentAuthUserId = localStorage.getItem('swaploop_auth_user_id') || 'user-arjun';
+let currentAuthUserId = localStorage.getItem('swaploop_auth_user_id') || '';
 
 export const setAuthUserId = (id: string) => {
   currentAuthUserId = id;
-  localStorage.setItem('swaploop_auth_user_id', id);
+  if (id) {
+    localStorage.setItem('swaploop_auth_user_id', id);
+  } else {
+    localStorage.removeItem('swaploop_auth_user_id');
+  }
 };
 
 export const getAuthUserId = () => currentAuthUserId;
@@ -12,7 +16,7 @@ export const getAuthUserId = () => currentAuthUserId;
 const apiRequest = async <T = any>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const headers = {
     'Content-Type': 'application/json',
-    'x-user-id': currentAuthUserId,
+    ...(currentAuthUserId ? { 'x-user-id': currentAuthUserId } : {}),
     ...(options.headers || {})
   };
 
@@ -58,6 +62,7 @@ export const api = {
     category: ItemCategory;
     condition: ItemCondition;
     valueBand: ValueBand;
+    imageUrl?: string;
     isFreeGift: boolean;
   }) => apiRequest<{ item: any }>('/api/items', {
     method: 'POST',

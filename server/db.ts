@@ -66,12 +66,19 @@ export const initDb = async () => {
       category TEXT NOT NULL,
       condition TEXT NOT NULL,
       value_band TEXT NOT NULL,
+      image_url TEXT,
       is_free_gift INTEGER NOT NULL DEFAULT 0,
       is_locked_in_proposal INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
+
+  try {
+    await run('ALTER TABLE items ADD COLUMN image_url TEXT');
+  } catch (_) {
+    // Column already exists
+  }
 
   await run(`
     CREATE TABLE IF NOT EXISTS wants (
@@ -171,6 +178,7 @@ export const seedScenarioA = async () => {
   await run('DELETE FROM users');
   await run('DELETE FROM declined_signatures');
   await run('DELETE FROM reports');
+  await run('DELETE FROM notifications');
 
   const defaultPasswordHash = await bcrypt.hash('password123', 10);
   const now = Date.now();
@@ -220,33 +228,33 @@ export const seedScenarioA = async () => {
   // Seed Items
   // Arjun: Mini drafter (Low, Stationery)
   await run(`
-    INSERT INTO items (id, owner_id, title, category, condition, value_band, is_free_gift, is_locked_in_proposal, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, ['item-drafter', 'user-arjun', 'Mini drafter', 'Stationery', 'Like New', 'Low', 0, 0, now]);
+    INSERT INTO items (id, owner_id, title, category, condition, value_band, image_url, is_free_gift, is_locked_in_proposal, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['item-drafter', 'user-arjun', 'Mini drafter', 'Stationery', 'Like New', 'Low', 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=800&q=80', 0, 0, now]);
 
   // Bhavya: Bicycle (Low, Hostel Gear)
   await run(`
-    INSERT INTO items (id, owner_id, title, category, condition, value_band, is_free_gift, is_locked_in_proposal, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, ['item-bicycle', 'user-bhavya', 'Bicycle', 'Hostel Gear', 'Good', 'Low', 0, 0, now]);
+    INSERT INTO items (id, owner_id, title, category, condition, value_band, image_url, is_free_gift, is_locked_in_proposal, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['item-bicycle', 'user-bhavya', 'Bicycle', 'Hostel Gear', 'Good', 'Low', 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80', 0, 0, now]);
 
   // Chetan: Extension board (Low, Electronics)
   await run(`
-    INSERT INTO items (id, owner_id, title, category, condition, value_band, is_free_gift, is_locked_in_proposal, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, ['item-ext-board', 'user-chetan', 'Extension board', 'Electronics', 'Like New', 'Low', 0, 0, now]);
+    INSERT INTO items (id, owner_id, title, category, condition, value_band, image_url, is_free_gift, is_locked_in_proposal, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['item-ext-board', 'user-chetan', 'Extension board', 'Electronics', 'Like New', 'Low', 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80', 0, 0, now]);
 
   // Divya: Headphones (Low, Electronics)
   await run(`
-    INSERT INTO items (id, owner_id, title, category, condition, value_band, is_free_gift, is_locked_in_proposal, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, ['item-headphones', 'user-divya', 'Headphones', 'Electronics', 'Good', 'Low', 0, 0, now]);
+    INSERT INTO items (id, owner_id, title, category, condition, value_band, image_url, is_free_gift, is_locked_in_proposal, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['item-headphones', 'user-divya', 'Headphones', 'Electronics', 'Good', 'Low', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80', 0, 0, now]);
 
   // Esha: Table lamp (Low, Furniture)
   await run(`
-    INSERT INTO items (id, owner_id, title, category, condition, value_band, is_free_gift, is_locked_in_proposal, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, ['item-table-lamp', 'user-esha', 'Table lamp', 'Furniture', 'Good', 'Low', 0, 0, now]);
+    INSERT INTO items (id, owner_id, title, category, condition, value_band, image_url, is_free_gift, is_locked_in_proposal, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['item-table-lamp', 'user-esha', 'Table lamp', 'Furniture', 'Good', 'Low', 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80', 0, 0, now]);
 
   // Seed Wants
   // Arjun wants: Bicycle, Headphones
@@ -267,13 +275,28 @@ export const seedScenarioA = async () => {
 
   // Set active scenario
   await run('INSERT OR REPLACE INTO system_config (key, value) VALUES (?, ?)', ['active_scenario', 'A']);
-  await run('INSERT OR REPLACE INTO system_config (key, value) VALUES (?, ?)', ['drop_time', '20:00']);
+  await run('INSERT OR REPLACE INTO system_config (key, value) VALUES (?, ?)', ['drop_time', '17:00']);
 
-  // Initial welcome notification
+  // Initial welcome and drop schedule notifications
   await run(`
     INSERT INTO notifications (id, user_id, title, message, type, read, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `, ['notif-1', 'user-arjun', 'Welcome to SwapLoop!', 'Scenario A loaded. Your Mini drafter is ready for The Drop matching.', 'system', 0, now]);
+  `, ['notif-1', 'user-arjun', 'Welcome to SwapLoop!', 'Scenario A loaded. Your Mini drafter is ready for The Drop matching.', 'system', 0, now - 3600000]);
+
+  await run(`
+    INSERT INTO notifications (id, user_id, title, message, type, read, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `, ['notif-2', 'user-arjun', '⏰ Drop Reminder: 30 Mins', 'The Drop is today at 5:00 PM.', 'drop', 0, now - 1800000]);
+
+  await run(`
+    INSERT INTO notifications (id, user_id, title, message, type, read, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `, ['notif-3', 'user-arjun', '⚡ Drop Alert: 15 Mins', 'The Drop starts in 15 minutes.', 'drop', 0, now - 900000]);
+
+  await run(`
+    INSERT INTO notifications (id, user_id, title, message, type, read, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `, ['notif-4', 'user-arjun', '🔥 Final Prep: 5 Mins', 'The Drop starts in 5 minutes.', 'drop', 0, now - 300000]);
 };
 
 export const seedScenarioB = async () => {
@@ -288,9 +311,9 @@ export const seedScenarioB = async () => {
   `, ['user-kiran', 'Kiran Reddy', 'kiran@college.edu', defaultPasswordHash, 'Hostel 3, Room 110 | Ph: +91 98765 43215', 'Trusted', 115, 1, 'Student', 4, 0, now]);
 
   await run(`
-    INSERT INTO items (id, owner_id, title, category, condition, value_band, is_free_gift, is_locked_in_proposal, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, ['item-study-table', 'user-kiran', 'Solid Wood Study Table', 'Furniture', 'Good', 'Medium', 1, 0, now]);
+    INSERT INTO items (id, owner_id, title, category, condition, value_band, image_url, is_free_gift, is_locked_in_proposal, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, ['item-study-table', 'user-kiran', 'Solid Wood Study Table', 'Furniture', 'Good', 'Medium', 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=800&q=80', 1, 0, now]);
 
   // Divya also wants Kiran's study table
   await run('INSERT INTO wants (student_id, item_id) VALUES (?, ?)', ['user-divya', 'item-study-table']);

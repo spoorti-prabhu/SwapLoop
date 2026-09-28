@@ -16,10 +16,10 @@ initDb().then(() => {
   console.log('✅ SQLite Database ready with persistent schema and seeded data.');
 });
 
-// Daily Scheduled Drop (Section 40)
-// Configurable cron schedule: default 8:00 PM (20:00) every day
-cron.schedule('0 20 * * *', async () => {
-  console.log('⏰ Scheduled Daily Drop running at 8:00 PM...');
+// Daily Scheduled Drop
+// Configurable cron schedule: default 5:00 PM (17:00) every day
+cron.schedule('0 17 * * *', async () => {
+  console.log('⏰ Scheduled Daily Drop running at 5:00 PM...');
   try {
     const result = await runServerDropMatchingEngine();
     console.log(`Drop executed automatically: ${result.scenarioNote}`);
@@ -153,7 +153,13 @@ app.get('/api/users', async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/items', async (req, res) => {
   try {
-    const items = await query('SELECT * FROM items ORDER BY created_at DESC');
+    const items = await query(`
+      SELECT i.id, i.owner_id, i.title, i.category, i.condition, i.value_band, i.image_url, i.is_free_gift, i.is_locked_in_proposal, i.created_at,
+             u.trust_level as owner_trust_level
+      FROM items i
+      JOIN users u ON i.owner_id = u.id
+      ORDER BY i.created_at DESC
+    `);
     res.json({ items });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -165,7 +171,7 @@ app.post('/api/items', async (req, res) => {
     const user = await getAuthUser(req);
     if (!user) return res.status(401).json({ error: 'Authentication required' });
 
-    const { title, category, condition, valueBand, isFreeGift } = req.body;
+    const { title, category, condition, valueBand, imageUrl, isFreeGift } = req.body;
     if (!title || !category || !condition || !valueBand) {
       return res.status(400).json({ error: 'Missing required item fields.' });
     }
@@ -181,9 +187,9 @@ app.post('/api/items', async (req, res) => {
     const now = Date.now();
 
     await run(`
-      INSERT INTO items (id, owner_id, title, category, condition, value_band, is_free_gift, is_locked_in_proposal, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
-    `, [itemId, user.id, title.trim(), category, condition, valueBand, isFreeGift ? 1 : 0, now]);
+      INSERT INTO items (id, owner_id, title, category, condition, value_band, image_url, is_free_gift, is_locked_in_proposal, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+    `, [itemId, user.id, title.trim(), category, condition, valueBand, imageUrl || null, isFreeGift ? 1 : 0, now]);
 
     const createdItem = await get('SELECT * FROM items WHERE id = ?', [itemId]);
     res.status(201).json({ item: createdItem });
@@ -286,7 +292,7 @@ app.post('/api/drop/trigger', async (req, res) => {
 app.get('/api/drop/status', async (req, res) => {
   try {
     const config = await get<any>('SELECT value FROM system_config WHERE key = ?', ['drop_time']);
-    const dropTimeStr = config?.value || '20:00';
+    const dropTimeStr = config?.value || '17:00';
     const [h, m] = dropTimeStr.split(':').map(Number);
 
     const now = new Date();
@@ -301,6 +307,19 @@ app.get('/api/drop/status', async (req, res) => {
       scheduledTime: dropTimeStr,
       secondsUntilDrop: remainingSeconds
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/drop/time', async (req, res) => {
+  try {
+    const { time } = req.body;
+    if (!time || !time.includes(':')) {
+      return res.status(400).json({ error: 'Valid HH:MM time required.' });
+    }
+    await run('INSERT OR REPLACE INTO system_config (key, value) VALUES (?, ?)', ['drop_time', time]);
+    res.json({ success: true, dropTime: time });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -324,13 +343,14 @@ app.get('/api/proposals', async (req, res) => {
         WHERE pm.proposal_id = ?
       `, [prop.id]);
 
-      const isSealed = prop.status === 'sealed' || prop.status === 'completed';
+      const isCompleted = prop.status === 'completed';
+      const isSealedOrCompleted = prop.status === 'sealed' || prop.status === 'completed';
 
       const sanitizedMembers = members.map((m: any) => {
         const isSelf = user && m.student_id === user.id;
 
-        if (isSealed) {
-          // SEALED: Real identities and codes revealed
+        if (isCompleted) {
+          // COMPLETED: Full reveal celebration moment!
           return {
             studentId: m.student_id,
             name: m.real_name,
@@ -348,8 +368,27 @@ app.get('/api/proposals', async (req, res) => {
             pickupDone: m.pickup_done === 1,
             returnCode: m.return_code
           };
+        } else if (isSealedOrCompleted) {
+          // SEALED: Handover codes are ready, but participant identities remain strictly anonymous (Swapper 1, etc.)
+          return {
+            studentId: m.student_id,
+            name: isSelf ? m.real_name : m.codename,
+            email: isSelf ? m.real_email : undefined,
+            contactNote: isSelf ? m.real_contact_note : undefined,
+            codename: m.codename,
+            givesItemId: m.gives_item_id,
+            receivesItemId: m.receives_item_id,
+            accepted: m.accepted === 1,
+            handoverChoice: m.handover_choice,
+            checkedInMeet: m.checked_in_meet === 1,
+            dropoffCode: m.dropoff_code,
+            dropoffDone: m.dropoff_done === 1,
+            pickupCode: m.pickup_code,
+            pickupDone: m.pickup_done === 1,
+            returnCode: m.return_code
+          };
         } else {
-          // BLIND (F7): Omit real name, email, contact note from network payload!
+          // BLIND (F7): Omit real name, email, contact note, and codes from network payload!
           return {
             studentId: m.student_id,
             name: isSelf ? m.real_name : m.codename,
@@ -388,7 +427,8 @@ app.post('/api/proposals/:id/accept', async (req, res) => {
   try {
     const user = await getAuthUser(req);
     const { id } = req.params;
-    const { handoverChoice } = req.body; // 'desk' or 'meet'
+    const { handoverChoice, studentId } = req.body; // 'desk' or 'meet'
+    const effectiveUserId = studentId || user?.id;
 
     const prop = await get('SELECT * FROM proposals WHERE id = ?', [id]);
     if (!prop) return res.status(404).json({ error: 'Proposal not found' });
@@ -401,7 +441,7 @@ app.post('/api/proposals/:id/accept', async (req, res) => {
       UPDATE proposal_members
       SET accepted = 1, handover_choice = ?
       WHERE proposal_id = ? AND student_id = ?
-    `, [handoverChoice || 'desk', id, user.id]);
+    `, [handoverChoice || 'desk', id, effectiveUserId]);
 
     // Check if ALL members have accepted
     const members = await query('SELECT accepted, handover_choice FROM proposal_members WHERE proposal_id = ?', [id]);
@@ -704,19 +744,23 @@ app.put('/api/reports/:id/resolve', async (req, res) => {
 // -------------------------------------------------------------
 app.post('/api/scenarios/:name', async (req, res) => {
   try {
-    const { name } = req.params;
-    if (name.toUpperCase() === 'A') {
+    let name = req.params.name;
+    if (name.toLowerCase() === 'load' && req.body && req.body.scenario) {
+      name = req.body.scenario;
+    }
+    const cleanName = name.toUpperCase();
+    if (cleanName === 'A') {
       await seedScenarioA();
-    } else if (name.toUpperCase() === 'B') {
+    } else if (cleanName === 'B') {
       await seedScenarioB();
-    } else if (name.toUpperCase() === 'C') {
+    } else if (cleanName === 'C') {
       await seedScenarioC(false);
-    } else if (name.toUpperCase() === 'C_TRUSTED') {
+    } else if (cleanName === 'C_TRUSTED') {
       await seedScenarioC(true);
     } else {
       await seedScenarioA();
     }
-    res.json({ success: true, scenario: name.toUpperCase() });
+    res.json({ success: true, scenario: cleanName });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

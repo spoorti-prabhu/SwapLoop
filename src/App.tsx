@@ -1,105 +1,352 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SwapLoopProvider, useSwapLoop } from './context/SwapLoopContext';
-import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
 import { AdminControlBar } from './components/AdminControlBar';
+import { SettingsModal } from './components/SettingsModal';
+import { Dashboard } from './components/Dashboard';
+import { HomeHeroView } from './components/HomeHeroView';
 import { BrowseItemsView } from './components/BrowseItemsView';
 import { MyItemsView } from './components/MyItemsView';
 import { MyWantsView } from './components/MyWantsView';
-import { TheDropView } from './components/TheDropView';
-import { SwapDeskPortal } from './components/SwapDeskPortal';
 import { LoopWallView } from './components/LoopWallView';
+import { SwapDeskPortal } from './components/SwapDeskPortal';
+import { TheDropView } from './components/TheDropView';
 import { AuthModal } from './components/AuthModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
-import { LoginPage } from './components/LoginPage';
 import { TechArchitectureModal } from './components/TechArchitectureModal';
+import { LoginPage } from './components/LoginPage';
+import { AdminView } from './components/AdminView';
+import {
+  Bell,
+  Award,
+  Shield,
+  Menu,
+  X,
+  Sliders,
+  LogOut
+} from 'lucide-react';
+import { UserRole } from './types/swaploop';
 
 const MainAppLayout: React.FC = () => {
-  const { activeTab, login } = useSwapLoop();
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isNotifsOpen, setIsNotifsOpen] = useState(false);
-  const [isArchOpen, setIsArchOpen] = useState(false);
-  const [showDedicatedLoginPage, setShowDedicatedLoginPage] = useState(false);
+  const {
+    activeTab,
+    setActiveTab,
+    currentUser,
+    currentRole,
+    setCurrentRole,
+    isAuthenticated,
+    notifications,
+    login,
+    logout
+  } = useSwapLoop();
 
-  // If user explicitly wants to view the standalone pixel-perfect login page
-  if (showDedicatedLoginPage) {
+  const [isAdminBarVisible, setIsAdminBarVisible] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNotifsOpen, setIsNotifsOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isArchOpen, setIsArchOpen] = useState(false);
+  const [selectedCampus, setSelectedCampus] = useState('North Campus');
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Global F10 Hotkey Listener for Admin Presets Bar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F10') {
+        e.preventDefault();
+        setIsAdminBarVisible((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Auth Guard: If user is not authenticated or currentUser is null, display the Sign-In screen
+  if (!isAuthenticated || !currentUser) {
     return (
-      <div className="relative">
+      <div className="relative min-h-screen">
         <LoginPage
           onSignIn={async (email) => {
             await login(email);
-            setShowDedicatedLoginPage(false);
           }}
           onOpenRegister={() => {
-            setShowDedicatedLoginPage(false);
             setIsAuthOpen(true);
           }}
           onOpenForgotPassword={() => {
-            alert("Password reset simulated for your university email.");
+            alert('Password reset link sent to your registered university email.');
           }}
         />
-        <button
-          onClick={() => setShowDedicatedLoginPage(false)}
-          className="fixed bottom-6 left-6 z-50 px-4 py-2 rounded-full bg-slate-900/80 text-white text-xs font-semibold backdrop-blur-md hover:bg-slate-900 transition-all shadow-lg"
-        >
-          ← Return to SwapLoop Platform
-        </button>
+        <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </div>
     );
   }
 
+  // Active view title mapping for breadcrumbs
+  const getTabTitle = (tab: string) => {
+    switch (tab) {
+      case 'dashboard':
+        return 'Student Dashboard';
+      case 'how_it_works':
+        return 'How the Rules Work';
+      case 'browse':
+        return 'Browse Campus Items';
+      case 'have':
+        return 'My Have List';
+      case 'wants':
+        return 'My Want List';
+      case 'wall':
+        return 'Loop Wall & Campus Impact';
+      case 'desk':
+        return 'Swap Desk Verification Escrow';
+      case 'drop':
+        return 'The Drop Matching Engine';
+      case 'admin':
+        return 'Campus Administration & Oversight';
+      default:
+        return 'Campus Circular';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#fff7f9] text-slate-800 selection:bg-pink-100 selection:text-pink-900 flex flex-col font-sans">
-      {/* Admin Scenario Presets Bar (F10) */}
-      <AdminControlBar />
+    <div className="flex h-screen w-full bg-[#FFF7FA] text-slate-800 overflow-hidden font-sans selection:bg-pink-100 selection:text-pink-900">
+      {/* 1. LEFT-HAND VERTICAL STICKY SIDEBAR NAVIGATION */}
+      {/* Desktop / Split-Screen Sidebar */}
+      <div className="hidden md:flex flex-shrink-0 h-full">
+        <Sidebar
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          selectedCampus={selectedCampus}
+          onSelectCampus={setSelectedCampus}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+      </div>
 
-      {/* Main Navbar (Tabs, Trust Badge, Swap Score, Role Switcher, Student Impersonation, How It Works) */}
-      <Navbar
-        onOpenAuth={() => setIsAuthOpen(true)}
-        onOpenNotifications={() => setIsNotifsOpen(true)}
-        onOpenArchitecture={() => setIsArchOpen(true)}
-      />
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'browse' && <BrowseItemsView />}
-        {activeTab === 'have' && <MyItemsView />}
-        {activeTab === 'wants' && <MyWantsView />}
-        {activeTab === 'drop' && <TheDropView />}
-        {activeTab === 'desk' && <SwapDeskPortal />}
-        {activeTab === 'wall' && <LoopWallView />}
-      </main>
-
-      {/* Footer & Reference Login View Switcher */}
-      <footer className="mt-auto border-t border-pink-100 bg-white/70 backdrop-blur-sm py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div>
-            SwapLoop — The Campus Circular • Soft Blush Mist Theme
-          </div>
-
-          <div className="flex items-center gap-4">
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-72 h-full bg-white shadow-2xl relative">
+            <Sidebar
+              onOpenSettings={() => {
+                setIsMobileMenuOpen(false);
+                setIsSettingsOpen(true);
+              }}
+              selectedCampus={selectedCampus}
+              onSelectCampus={(camp) => {
+                setSelectedCampus(camp);
+                setIsMobileMenuOpen(false);
+              }}
+              isCollapsed={false}
+            />
             <button
-              onClick={() => setIsArchOpen(true)}
-              className="text-pink-600 hover:text-pink-700 font-semibold hover:underline"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-pink-50 text-slate-600 flex items-center justify-center hover:bg-pink-100 transition-colors"
+              aria-label="Close menu"
             >
-              System Architecture Diagram
+              <X className="w-4 h-4" />
             </button>
-            <span className="text-slate-300">•</span>
-            <button
-              onClick={() => setShowDedicatedLoginPage(true)}
-              className="text-slate-600 hover:text-pink-600 font-semibold hover:underline"
-            >
-              View Dedicated Login Screen (Reference Replica)
-            </button>
-            <span className="text-slate-300">•</span>
-            <span>All trades 100% cashless</span>
           </div>
+          <div className="flex-1" onClick={() => setIsMobileMenuOpen(false)} />
         </div>
-      </footer>
+      )}
+
+      {/* 2. MAIN APP CONTENT CONTAINER (Split-screen safe: flex-1 min-w-0) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        {/* Admin Scenario Presets Bar (F10 Hotkey Toggleable) */}
+        <AdminControlBar
+          isVisible={isAdminBarVisible}
+          onToggleVisibility={() => setIsAdminBarVisible(false)}
+        />
+
+        {/* Lightweight Top Navigation Rail */}
+        <header className="h-16 border-b border-pink-100 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-4 flex-shrink-0 z-20">
+          {/* Left: Mobile hamburger & Active Breadcrumb */}
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-2 rounded-xl bg-pink-50 text-slate-700 hover:text-[#db2777] hover:bg-pink-100 transition-colors cursor-pointer"
+              aria-label="Open sidebar navigation"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs font-bold text-slate-400 hidden sm:inline">SwapLoop</span>
+              <span className="text-slate-300 hidden sm:inline">/</span>
+              <h1 className="text-sm sm:text-base font-black text-slate-900 truncate">
+                {getTabTitle(activeTab)}
+              </h1>
+            </div>
+          </div>
+
+          {/* Right: Quick actions, Role Switcher, Notifications, Admin F10 Pill, Sign Out */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* F10 Admin Hotkey Indicator Pill */}
+            <button
+              onClick={() => setIsAdminBarVisible(!isAdminBarVisible)}
+              className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                isAdminBarVisible
+                  ? 'bg-slate-900 text-pink-300 shadow-2xs'
+                  : 'bg-white hover:bg-pink-50 text-slate-600 border border-pink-200'
+              }`}
+              title="Toggle Admin Scenario Presets Bar (Hotkey: F10)"
+            >
+              <kbd className="px-1 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-pink-300">
+                F10
+              </kbd>
+              <span>{isAdminBarVisible ? 'Admin Bar On' : 'Admin Presets'}</span>
+            </button>
+
+            {/* Trust Tier Badge */}
+            {currentUser && (
+              <div
+                className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                  currentUser.trustLevel === 'New'
+                    ? 'bg-pink-50 border-pink-200 text-[#be185d]'
+                    : currentUser.trustLevel === 'Trusted'
+                    ? 'bg-purple-50 border-purple-200 text-purple-700'
+                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                }`}
+                title={`Trust Level: ${currentUser.trustLevel}`}
+              >
+                <Shield className="w-3 h-3" />
+                <span>{currentUser.trustLevel} Tier</span>
+              </div>
+            )}
+
+            {/* Swap Score Pill */}
+            {currentUser && (
+              <div
+                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[11px] font-bold shadow-2xs"
+                title="Swap Score (starts at 100)"
+              >
+                <Award className="w-3 h-3 text-amber-400" />
+                <span>{currentUser.swapScore} pts</span>
+              </div>
+            )}
+
+            {/* Quick Role Switcher */}
+            <div className="hidden xl:flex items-center bg-[#FFF7FA] p-1 rounded-full border border-pink-100 text-[11px] font-semibold">
+              {(['Student', 'Desk Operator', 'Admin'] as UserRole[]).map((role) => (
+                <button
+                  key={role}
+                  onClick={() => {
+                    setCurrentRole(role);
+                    if (role === 'Desk Operator') setActiveTab('desk');
+                    else if (role === 'Admin') setActiveTab('admin');
+                    else setActiveTab('dashboard');
+                  }}
+                  className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                    currentRole === role
+                      ? 'bg-white text-[#db2777] shadow-2xs font-bold border border-pink-200'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {role === 'Desk Operator' ? 'Desk Operator' : role === 'Admin' ? 'Admin' : 'Student'}
+                </button>
+              ))}
+            </div>
+
+            {/* Notification Bell */}
+            <button
+              onClick={() => setIsNotifsOpen(true)}
+              className="relative p-2 rounded-full text-slate-600 hover:text-[#db2777] hover:bg-pink-50/80 transition-colors cursor-pointer"
+              aria-label="Notifications"
+            >
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-[#db2777] text-white rounded-full text-[10px] font-bold flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Settings Quick Access */}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 rounded-full text-slate-600 hover:text-[#db2777] hover:bg-pink-50/80 transition-colors cursor-pointer"
+              title="Open Campus & Student Settings"
+              aria-label="Settings"
+            >
+              <Sliders className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
+            {/* Sign Out Button in Header */}
+            <button
+              onClick={logout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer shadow-2xs"
+              title="Sign out of your active session"
+            >
+              <LogOut className="w-3.5 h-3.5 text-rose-600" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
+        </header>
+
+        {/* 3. SCROLLABLE MAIN CONTENT (50/50 Split-Screen desktop safe) */}
+        <main className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 scrollbar-thin">
+          <div className="max-w-6xl mx-auto w-full min-w-0">
+            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'how_it_works' && (
+              <HomeHeroView onOpenArchitecture={() => setIsArchOpen(true)} />
+            )}
+            {activeTab === 'home' && (
+              <HomeHeroView onOpenArchitecture={() => setIsArchOpen(true)} />
+            )}
+            {activeTab === 'browse' && <BrowseItemsView />}
+            {activeTab === 'have' && <MyItemsView />}
+            {activeTab === 'wants' && <MyWantsView />}
+            {activeTab === 'wall' && <LoopWallView />}
+            {activeTab === 'desk' && <SwapDeskPortal />}
+            {activeTab === 'drop' && <TheDropView />}
+            {activeTab === 'admin' && (
+              <AdminView onOpenArchitecture={() => setIsArchOpen(true)} />
+            )}
+          </div>
+        </main>
+
+        {/* 4. COMPACT FOOTER */}
+        <footer className="border-t border-pink-100 bg-white/70 backdrop-blur-sm py-3 px-4 sm:px-6 flex-shrink-0 text-[11px] text-slate-500">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-700">SwapLoop</span>
+              <span>•</span>
+              <span>Campus Circular Economy</span>
+              <span>•</span>
+              <span className="text-emerald-700 font-medium">100% Cashless Dorm Swaps</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsArchOpen(true)}
+                className="text-[#db2777] hover:underline font-semibold cursor-pointer"
+              >
+                System Architecture
+              </button>
+              <span>•</span>
+              <button
+                onClick={logout}
+                className="text-rose-600 hover:underline font-semibold cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
 
       {/* Modals & Drawers */}
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        selectedCampus={selectedCampus}
+        onSelectCampus={setSelectedCampus}
+      />
       <NotificationDrawer isOpen={isNotifsOpen} onClose={() => setIsNotifsOpen(false)} />
       <TechArchitectureModal isOpen={isArchOpen} onClose={() => setIsArchOpen(false)} />
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
     </div>
   );
 };

@@ -34,6 +34,11 @@ export default {
         }
       },
       fontFamily: {
+        cursive: [
+          'Caveat',
+          'Pacifico',
+          'cursive'
+        ],
         sans: [
           'Inter',
           '-apple-system',

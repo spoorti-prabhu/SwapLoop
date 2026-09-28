@@ -22,6 +22,7 @@ import { api, setAuthUserId, getAuthUserId } from '../services/api';
 interface SwapLoopContextType {
   // Auth & Current User
   currentUser: User | null;
+  isAuthenticated: boolean;
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
   activeTab: string;
@@ -40,6 +41,7 @@ interface SwapLoopContextType {
     category: ItemCategory;
     condition: ItemCondition;
     valueBand: ValueBand;
+    imageUrl?: string;
     isFreeGift: boolean;
   }) => Promise<void>;
   editItem: (id: string, updates: Partial<Item>) => Promise<void>;
@@ -65,7 +67,9 @@ interface SwapLoopContextType {
 
   // Scenario Loader
   currentScenario: string;
-  loadScenario: (scenario: 'A' | 'B' | 'C' | 'default') => Promise<void>;
+  loadScenario: (scenario: 'A' | 'B' | 'C' | 'C_TRUSTED' | 'default') => Promise<void>;
+  setScenario: (scenario: string) => Promise<void>;
+  activeScenario: string;
 
   // Stats & Notifications
   stats: LoopWallStats;
@@ -79,9 +83,15 @@ const SwapLoopContext = createContext<SwapLoopContextType | undefined>(undefined
 
 export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(SEED_USERS_SCENARIO_A);
-  const [currentUserId, setCurrentUserId] = useState<string>(getAuthUserId());
-  const [currentRole, setCurrentRole] = useState<UserRole>('Student');
-  const [activeTab, setActiveTab] = useState<string>('browse');
+
+  const initialAuthUserId = getAuthUserId();
+  const initialAuthenticated = (localStorage.getItem('swaploop_authenticated') === 'true' || !!initialAuthUserId);
+  const initialRole = (localStorage.getItem('swaploop_auth_role') as UserRole) || 'Student';
+
+  const [currentUserId, setCurrentUserId] = useState<string>(initialAuthenticated ? initialAuthUserId : '');
+  const [currentRole, setCurrentRole] = useState<UserRole>(initialRole);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialAuthenticated && !!initialAuthUserId);
+  const [activeTab, setActiveTab] = useState<string>(initialRole === 'Desk Operator' ? 'desk' : initialRole === 'Admin' ? 'admin' : 'dashboard');
   const [items, setItems] = useState<Item[]>(SEED_ITEMS_SCENARIO_A);
   const [wants, setWants] = useState<WantRelation[]>(SEED_WANTS_SCENARIO_A);
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -104,7 +114,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ]);
 
       if (usersRes.users && usersRes.users.length > 0) {
-        setUsers(usersRes.users.map((u: any) => ({
+        const mappedUsers: User[] = usersRes.users.map((u: any) => ({
           id: u.id,
           name: u.name,
           email: u.email,
@@ -114,7 +124,17 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           emailVerified: u.email_verified === 1,
           role: u.role,
           completedSwapsCount: u.completed_swaps_count
-        })));
+        }));
+        setUsers(mappedUsers);
+
+        // Sync role if current user is active
+        if (currentUserId) {
+          const activeUser = mappedUsers.find(u => u.id === currentUserId);
+          if (activeUser) {
+            setCurrentRole(activeUser.role);
+            localStorage.setItem('swaploop_auth_role', activeUser.role);
+          }
+        }
       }
 
       if (itemsRes.items && itemsRes.items.length > 0) {
@@ -125,6 +145,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           category: it.category,
           condition: it.condition,
           valueBand: it.value_band,
+          imageUrl: it.image_url,
           isFreeGift: it.is_free_gift === 1,
           isLockedInProposal: it.is_locked_in_proposal === 1,
           createdAt: it.created_at
@@ -185,7 +206,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => clearInterval(interval);
   }, []);
 
-  const currentUser = users.find(u => u.id === currentUserId) || users[0] || null;
+  const currentUser = currentUserId ? (users.find(u => u.id === currentUserId) || null) : null;
 
   // Auth
   const login = async (email: string): Promise<boolean> => {
@@ -193,12 +214,41 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const res = await api.login(email);
       if (res.user) {
         setCurrentUserId(res.user.id);
+        setCurrentRole(res.user.role);
+        setIsAuthenticated(true);
         setAuthUserId(res.user.id);
+        localStorage.setItem('swaploop_authenticated', 'true');
+        localStorage.setItem('swaploop_auth_role', res.user.role);
+        if (res.user.role === 'Desk Operator') {
+          setActiveTab('desk');
+        } else if (res.user.role === 'Admin') {
+          setActiveTab('admin');
+        } else {
+          setActiveTab('dashboard');
+        }
         await refreshData();
         return true;
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.warn('Backend login attempt failed, attempting fallback match:', err);
+      // Fallback matching seeded users if API is syncing
+      const matched = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+      if (matched) {
+        setCurrentUserId(matched.id);
+        setCurrentRole(matched.role);
+        setIsAuthenticated(true);
+        setAuthUserId(matched.id);
+        localStorage.setItem('swaploop_authenticated', 'true');
+        localStorage.setItem('swaploop_auth_role', matched.role);
+        if (matched.role === 'Desk Operator') {
+          setActiveTab('desk');
+        } else if (matched.role === 'Admin') {
+          setActiveTab('admin');
+        } else {
+          setActiveTab('dashboard');
+        }
+        return true;
+      }
     }
     return false;
   };
@@ -208,7 +258,11 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const res = await api.register(data);
       if (res.user) {
         setCurrentUserId(res.user.id);
+        setCurrentRole(res.user.role);
+        setIsAuthenticated(true);
         setAuthUserId(res.user.id);
+        localStorage.setItem('swaploop_authenticated', 'true');
+        localStorage.setItem('swaploop_auth_role', res.user.role);
         await refreshData();
       }
     } catch (err) {
@@ -218,10 +272,14 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const logout = () => {
-    if (users.length > 0) {
-      setCurrentUserId(users[0].id);
-      setAuthUserId(users[0].id);
-    }
+    setCurrentUserId('');
+    setCurrentRole('Student');
+    setIsAuthenticated(false);
+    setAuthUserId('');
+    localStorage.removeItem('swaploop_authenticated');
+    localStorage.removeItem('swaploop_auth_role');
+    localStorage.removeItem('swaploop_auth_user_id');
+    setActiveTab('dashboard');
   };
 
   const toggleEmailVerified = async () => {
@@ -234,8 +292,22 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const impersonateUser = (userId: string) => {
-    setCurrentUserId(userId);
-    setAuthUserId(userId);
+    const targetUser = users.find(u => u.id === userId);
+    if (targetUser) {
+      setCurrentUserId(targetUser.id);
+      setCurrentRole(targetUser.role);
+      setIsAuthenticated(true);
+      setAuthUserId(targetUser.id);
+      localStorage.setItem('swaploop_authenticated', 'true');
+      localStorage.setItem('swaploop_auth_role', targetUser.role);
+      if (targetUser.role === 'Desk Operator') {
+        setActiveTab('desk');
+      } else if (targetUser.role === 'Admin') {
+        setActiveTab('admin');
+      } else {
+        setActiveTab('dashboard');
+      }
+    }
   };
 
   // Item Management (F2, T4)
@@ -244,6 +316,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     category: ItemCategory;
     condition: ItemCondition;
     valueBand: ValueBand;
+    imageUrl?: string;
     isFreeGift: boolean;
   }) => {
     try {
@@ -388,12 +461,21 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Scenario Loader (F10)
-  const loadScenario = async (scenario: 'A' | 'B' | 'C' | 'default') => {
+  const loadScenario = async (scenario: 'A' | 'B' | 'C' | 'C_TRUSTED' | 'default') => {
     try {
       await api.loadScenario(scenario);
       await refreshData();
     } catch (err) {
       console.error('Load scenario error:', err);
+    }
+  };
+
+  const setScenario = async (scenario: string) => {
+    try {
+      await api.loadScenario(scenario);
+      await refreshData();
+    } catch (err) {
+      console.error('Set scenario error:', err);
     }
   };
 
@@ -416,6 +498,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         currentUser,
         currentRole,
         setCurrentRole,
+        isAuthenticated,
         activeTab,
         setActiveTab,
         allUsers: users,
@@ -442,6 +525,8 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deskSimulateFailure,
         currentScenario,
         loadScenario,
+        setScenario,
+        activeScenario: currentScenario,
         stats,
         notifications,
         markNotificationRead,

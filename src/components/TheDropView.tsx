@@ -4,18 +4,31 @@ import {
   RotateCw,
   Clock,
   Zap,
-  EyeOff,
   Eye,
   CheckCircle2,
-  KeyRound,
-  QrCode,
   UserCheck,
   Building2,
   Users,
-  Repeat
+  Sparkles,
+  AlertTriangle,
+  Lock,
+  Check
 } from 'lucide-react';
 import { SwapMeetModal } from './SwapMeetModal';
 import { ReportModal } from './ReportModal';
+import { ItemIllustration } from './ItemIllustration';
+
+const MATCHING_STEPS = [
+  '1/9 • Identifying eligible students across campus residence halls...',
+  '2/9 • Loading active Have inventories (Drafter, Bicycle, Ext Board, Table Lamp)...',
+  '3/9 • Connecting Want vectors into directed edge graph...',
+  '4/9 • Discovering simple cycles of length 3 to 5...',
+  '5/9 • Applying Trust T4 filters (Value bands vs completed swaps)...',
+  '6/9 • Enforcing 3–5 member loop rule (disqualifying 2-person loops)...',
+  '7/9 • Resolving conflicting resource edges across overlapping candidates...',
+  '8/9 • Branch-and-bound optimization maximizing students satisfied...',
+  '9/9 • Generating cryptographically sealed Blind Proposals!'
+];
 
 export const TheDropView: React.FC = () => {
   const {
@@ -28,13 +41,18 @@ export const TheDropView: React.FC = () => {
     expireProposal,
     items,
     allUsers,
-    impersonateUser
+    impersonateUser,
+    setScenario
   } = useSwapLoop();
 
   const [lastMatchResult, setLastMatchResult] = useState<string | null>(null);
   const [timeRemainingMap, setTimeRemainingMap] = useState<Record<string, number>>({});
   const [selectedHandoverMap, setSelectedHandoverMap] = useState<Record<string, 'desk' | 'meet'>>({});
-  
+
+  // Matching Engine Animation State
+  const [isMatchingAnimating, setIsMatchingAnimating] = useState(false);
+  const [matchingStepIndex, setMatchingStepIndex] = useState(0);
+
   // Modals
   const [meetModalProposal, setMeetModalProposal] = useState<any | null>(null);
   const [reportData, setReportData] = useState<{ userId: string; userName: string; proposalId: string } | null>(null);
@@ -43,11 +61,23 @@ export const TheDropView: React.FC = () => {
 
   // Format seconds to HH:MM:SS
   const formatTime = (totalSec: number) => {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const formatCountdown = (totalSec: number) => {
     const h = Math.floor(totalSec / 3600);
     const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return {
+      hours: h.toString().padStart(2, '0'),
+      minutes: m.toString().padStart(2, '0'),
+      seconds: s.toString().padStart(2, '0')
+    };
   };
+
+  const countdown = formatCountdown(dropCountdownSeconds);
 
   // Timer loop for active proposal expiry countdowns (F9)
   useEffect(() => {
@@ -73,15 +103,29 @@ export const TheDropView: React.FC = () => {
   }, [proposals, currentUser.id, expireProposal]);
 
   const handleTriggerDrop = async () => {
+    setIsMatchingAnimating(true);
+    setMatchingStepIndex(0);
+
+    // Step through the 9 visual matching engine stages
+    for (let i = 0; i < MATCHING_STEPS.length; i++) {
+      setMatchingStepIndex(i);
+      await new Promise(r => setTimeout(r, 420));
+    }
+
     const res = await triggerDropNow();
+    setIsMatchingAnimating(false);
     if (res.scenarioNote) {
       setLastMatchResult(res.scenarioNote);
     }
   };
 
-  const getItemTitle = (itemId: string): string => {
-    const item = items.find(i => i.id === itemId);
-    return item ? item.title : 'Item';
+  const handleUpgradeToTrustedAndRerun = async () => {
+    await setScenario('C_TRUSTED');
+    await handleTriggerDrop();
+  };
+
+  const getItem = (itemId: string) => {
+    return items.find(i => i.id === itemId);
   };
 
   const getStudent = (studentId: string) => {
@@ -94,85 +138,174 @@ export const TheDropView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* The Drop Countdown Hero Component (F5) */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#fff7f9] via-white to-[#FAF3F8] border border-pink-200 p-6 sm:p-10 shadow-sm">
-        <div className="max-w-3xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-50 border border-pink-200 text-xs font-bold uppercase tracking-wider text-pink-600">
-            <RotateCw className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '8s' }} />
-            <span>F5 & F6 • Daily Algorithmic Matching</span>
+    <div className="space-y-10 animate-fadeIn pb-16">
+      {/* 1. THE DROP COUNTDOWN HERO BANNER */}
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-white via-[#FFF7F9] to-[#FFF0F4] border border-pink-200/90 p-8 sm:p-12 shadow-sm">
+        <div className="max-w-4xl space-y-5">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-pink-100/80 border border-pink-200 text-xs font-bold uppercase tracking-wider text-pink-700">
+            <RotateCw className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
+            <span>Campus Daily Drop • Scheduled Daily at 5:00 PM (17:00)</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
             The Daily Drop Engine
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            Every day at 8:00 PM, SwapLoop’s directed cycle engine analyzes all student Have & Want lists, enforcing trust levels and finding multi-student swap loops that maximize student happiness.
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-medium max-w-2xl">
+            Every day at 5:00 PM, SwapLoop's directed-cycle matching engine analyzes active Have and Want lists across residence halls, enforcing Trust T4 rules to discover multi-student closed loops of 3 to 5 swappers.
           </p>
 
           {/* Countdown & Trigger Button */}
-          <div className="pt-3 flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-pink-200 shadow-sm">
-              <Clock className="w-5 h-5 text-pink-500" />
+          <div className="pt-2 flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white border border-pink-200 shadow-sm">
+              <Clock className="w-6 h-6 text-pink-500" />
               <div>
-                <div className="text-[10px] uppercase font-bold text-slate-400">Next Scheduled Drop</div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 font-mono tracking-tight">
-                  {formatTime(dropCountdownSeconds)}
+                <div className="text-[10px] uppercase font-bold text-slate-400">Next Drop: Today · 5:00 PM</div>
+                <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-wider flex items-center gap-1.5 mt-0.5">
+                  <span>{countdown.hours}</span>
+                  <span className="text-pink-400">:</span>
+                  <span>{countdown.minutes}</span>
+                  <span className="text-pink-400">:</span>
+                  <span className="text-pink-600">{countdown.seconds}</span>
                 </div>
               </div>
             </div>
 
             <button
               onClick={handleTriggerDrop}
-              className="inline-flex items-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-[#f472b6] to-[#fb7185] hover:opacity-95 text-white font-bold text-sm shadow-md transition-all active:scale-95"
+              disabled={isMatchingAnimating}
+              className={`px-8 py-4 rounded-full font-black text-sm tracking-wide shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2.5 ${
+                isMatchingAnimating
+                  ? 'bg-slate-400 text-white cursor-not-allowed'
+                  : 'bg-gradient-to-r from-[#f472b6] to-[#fb7185] hover:from-[#ec4899] hover:to-[#f43f5e] text-white shadow-pink-500/25'
+              }`}
             >
-              <Zap className="w-4 h-4 fill-white" />
-              <span>Admin: Trigger Drop Now</span>
+              <Zap className={`w-4 h-4 ${isMatchingAnimating ? 'animate-spin' : 'animate-bounce'}`} />
+              <span>{isMatchingAnimating ? 'MATCHING ENGINE RUNNING...' : '⚡ TRIGGER DAILY DROP NOW'}</span>
             </button>
           </div>
-
-          {/* Scenario Simulation Note */}
-          {lastMatchResult && (
-            <div className="p-3.5 rounded-2xl bg-pink-50 border border-pink-200 text-xs text-pink-900 flex items-start gap-2.5 animate-fadeIn">
-              <CheckCircle2 className="w-4 h-4 text-pink-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold">Drop Engine Result: </span>
-                {lastMatchResult}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Active Proposals Section (F7, F8, F9) */}
-      <div className="space-y-5">
-        <div className="flex items-center justify-between">
+      {/* 2. MATCHING ENGINE SIMULATION OVERLAY */}
+      {isMatchingAnimating && (
+        <div className="rounded-3xl bg-slate-900 text-white p-8 sm:p-10 shadow-2xl border border-pink-500/30 space-y-6 animate-pulse">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-pink-500 animate-ping" />
+              <span className="text-lg font-black tracking-tight text-pink-300 uppercase">THE DROP IS HERE</span>
+            </div>
+            <span className="text-xs font-mono text-slate-400">Directed Graph Cycle Detector v2.4</span>
+          </div>
+
+          <div className="space-y-4">
+            <div className="text-sm font-mono text-emerald-400 flex items-center gap-2">
+              <RotateCw className="w-4 h-4 animate-spin" />
+              <span>{MATCHING_STEPS[matchingStepIndex]}</span>
+            </div>
+
+            {/* Visual Step Progress Bar */}
+            <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-pink-500 via-rose-400 to-emerald-400 h-full transition-all duration-300"
+                style={{ width: `${((matchingStepIndex + 1) / MATCHING_STEPS.length) * 100}%` }}
+              />
+            </div>
+
+            {/* Mini Animated Campus Graph Nodes */}
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 pt-2 font-mono text-xs">
+              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-center">
+                <div className="text-pink-400 font-bold">Node A</div>
+                <div className="text-[10px] text-slate-400">Arjun (Drafter)</div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-center">
+                <div className="text-pink-400 font-bold">Node B</div>
+                <div className="text-[10px] text-slate-400">Bhavya (Bicycle)</div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-center">
+                <div className="text-pink-400 font-bold">Node C</div>
+                <div className="text-[10px] text-slate-400">Chetan (Ext Board)</div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-center">
+                <div className="text-slate-400 font-bold">Node D</div>
+                <div className="text-[10px] text-slate-500">Divya (Headphones)</div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-center">
+                <div className="text-slate-400 font-bold">Node E</div>
+                <div className="text-[10px] text-slate-500">Esha (Table Lamp)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. SCENARIO NOTE OR "NO VALID LOOP FOUND" ALERT */}
+      {lastMatchResult && !isMatchingAnimating && (
+        <div className={`p-6 rounded-3xl border transition-all ${
+          lastMatchResult.includes('No valid loop found')
+            ? 'bg-amber-50/90 border-amber-300 text-amber-900 shadow-md'
+            : 'bg-emerald-50/80 border-emerald-200 text-emerald-900 shadow-sm'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              {lastMatchResult.includes('No valid loop found') ? (
+                <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                <div className="font-extrabold text-sm sm:text-base">
+                  {lastMatchResult.includes('No valid loop found') ? 'NO VALID LOOP FOUND' : 'DROP MATCHING COMPLETE'}
+                </div>
+                <div className="text-xs sm:text-sm mt-1 leading-relaxed opacity-90">
+                  {lastMatchResult}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick-fix action if in Scenario C */}
+            {lastMatchResult.includes('No valid loop found') && (
+              <button
+                onClick={handleUpgradeToTrustedAndRerun}
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-600 to-pink-600 hover:opacity-95 text-white font-bold text-xs shadow-md whitespace-nowrap transition-all"
+              >
+                Promote Arjun & Bhavya to Trusted & Re-run Drop
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. PROPOSALS SECTION */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-pink-100 pb-3">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <span>Drop Proposals & Blind Loops</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700 text-xs font-bold">
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2.5">
+              <span>Active Drop Proposals</span>
+              <span className="px-3 py-1 rounded-full bg-pink-100 text-pink-700 text-xs font-black">
                 {proposals.length}
               </span>
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Strict Blind Rule (F7): Real names and private contact notes remain completely withheld until 100% of participants accept.
+            <p className="text-xs text-slate-500 mt-1">
+              Strict Blind Rule (F7): Real names, college emails, and private contact notes remain withheld from network payloads until 100% of participants accept.
             </p>
           </div>
         </div>
 
         {proposals.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-pink-100 p-12 text-center space-y-3">
-            <div className="w-12 h-12 mx-auto rounded-full bg-[#fff7f9] flex items-center justify-center text-pink-400">
-              <RotateCw className="w-6 h-6" />
+          <div className="bg-white rounded-3xl border border-pink-100 p-12 text-center space-y-4 max-w-lg mx-auto">
+            <div className="w-20 h-20 mx-auto rounded-full bg-pink-50 flex items-center justify-center text-pink-400 border border-pink-100">
+              <RotateCw className="w-10 h-10" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">No active Drop proposals</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Click <strong className="text-pink-600">"Admin: Trigger Drop Now"</strong> above to run the matching engine on the current student lists!
-            </p>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">No active Drop proposals</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                Click <strong className="text-pink-600">"⚡ TRIGGER DAILY DROP NOW"</strong> above to run the matching engine across campus student inventories!
+              </p>
+            </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {proposals.map((proposal) => {
               const isSealed = proposal.status === 'sealed';
               const isProposed = proposal.status === 'proposed';
@@ -183,234 +316,211 @@ export const TheDropView: React.FC = () => {
 
               const remainingSec = timeRemainingMap[proposal.id] ?? 300;
               const isUserMember = proposal.members.some(m => m.studentId === currentUser.id);
+              const userMemberRecord = proposal.members.find(m => m.studentId === currentUser.id);
               const userChoice = selectedHandoverMap[proposal.id] || 'desk';
+
+              const acceptedCount = proposal.members.filter(m => m.accepted).length;
+              const totalCount = proposal.members.length;
+
+              const myGiveItem = userMemberRecord ? getItem(userMemberRecord.givesItemId) : null;
+              const myReceiveItem = userMemberRecord ? getItem(userMemberRecord.receivesItemId) : null;
 
               return (
                 <div
                   key={proposal.id}
-                  className={`bg-white rounded-3xl border p-6 sm:p-8 shadow-sm transition-all ${
-                    isSealed
-                      ? 'border-emerald-200 ring-2 ring-emerald-50'
+                  className={`bg-white rounded-[2.5rem] border p-6 sm:p-10 shadow-lg transition-all relative overflow-hidden ${
+                    isCompleted
+                      ? 'border-emerald-400 ring-4 ring-emerald-100 bg-gradient-to-b from-emerald-50/10 to-white'
+                      : isSealed
+                      ? 'border-emerald-300 ring-4 ring-emerald-50'
                       : isDeclined || isExpired || isFailed
-                      ? 'border-slate-200 opacity-75 bg-slate-50/50'
-                      : 'border-pink-200 ring-2 ring-pink-50'
+                      ? 'border-slate-200 opacity-70 bg-slate-50'
+                      : 'border-pink-300 ring-4 ring-pink-50/50'
                   }`}
                 >
-                  {/* Proposal Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-pink-50">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          isSealed
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : isProposed
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : isCompleted
-                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200'
-                        }`}
-                      >
-                        {proposal.status === 'proposed' && '⏳ Blind Proposal Pending'}
-                        {proposal.status === 'sealed' && '🔒 Loop Sealed & Authenticated'}
-                        {proposal.status === 'declined' && '❌ Dissolved (Declined)'}
-                        {proposal.status === 'expired' && '⏰ Expired (Timer Elapsed)'}
-                        {proposal.status === 'completed' && '🎉 Fully Completed at Desk'}
-                        {proposal.status === 'failed' && '⚠️ Failed (Deadline Expiry)'}
-                      </span>
-
-                      <span className="text-xs text-slate-400">
-                        {proposal.members.length}-Student Closed Cycle Loop
-                      </span>
+                  {/* Proposal Header: ✦ SWAP LOOP FOUND ✦ */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-pink-100">
+                    <div className="space-y-1">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-xs uppercase tracking-widest border ${
+                        isCompleted
+                          ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                          : 'bg-gradient-to-r from-pink-500/10 to-rose-500/10 text-pink-700 border-pink-200'
+                      }`}>
+                        <Sparkles className="w-3.5 h-3.5 text-pink-500" />
+                        <span>
+                          {isCompleted
+                            ? `✦ SWAP COMPLETED (${totalCount} STUDENTS) ✦`
+                            : `✦ SWAP LOOP FOUND (${totalCount} STUDENTS) ✦`}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {isCompleted
+                          ? '✨ Swap complete! Physical exchange verified at Swap Desk. Real identities now revealed.'
+                          : isSealed
+                          ? 'All participants confirmed! Handover phase active. Identities remain private until desk completion.'
+                          : 'Blind proposal active. Identities strictly withheld.'}
+                      </div>
                     </div>
 
-                    {/* Expiry Timer (F9) */}
-                    {isProposed && (
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold font-mono">
-                        <Clock className="w-3.5 h-3.5 animate-pulse" />
-                        <span>Acceptance Timer: {formatTime(remainingSec)}</span>
+                    <div className="flex items-center gap-4">
+                      {/* Acceptance Count */}
+                      <div className="px-3.5 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-pink-800 text-xs font-bold font-mono">
+                        {acceptedCount} / {totalCount} ACCEPTED
                       </div>
-                    )}
-                  </div>
 
-                  {/* Visual Animated Loop Diagram (Section 12 & 31) */}
-                  <div className="mt-4 p-4 rounded-2xl bg-[#fff7f9] border border-pink-100">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-pink-600 mb-2 flex items-center gap-1.5">
-                      <Repeat className="w-3.5 h-3.5" />
-                      <span>Circular Loop Flow (Student A &rarr; Student B &rarr; Student C &rarr; Student A)</span>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs font-semibold py-2">
-                      {proposal.members.map((m) => (
-                        <React.Fragment key={m.studentId}>
-                          <div className="px-3 py-1.5 rounded-full bg-white border border-pink-200 text-slate-800 shadow-sm flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></span>
-                            <span>{isSealed ? getStudent(m.studentId)?.name.split(' ')[0] : m.codename}</span>
-                            <span className="text-[10px] text-slate-400 font-normal">({getItemTitle(m.givesItemId)})</span>
-                          </div>
-                          <span className="text-pink-500 font-bold text-sm">
-                            &rarr;
-                          </span>
-                        </React.Fragment>
-                      ))}
-                      <div className="px-2.5 py-1 rounded-full bg-pink-100 text-pink-700 text-[11px] font-bold">
-                        Cycle Complete
-                      </div>
+                      {/* Expiry Countdown */}
+                      {isProposed && (
+                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono font-black">
+                          <Clock className="w-3.5 h-3.5 animate-pulse" />
+                          <span>{formatTime(remainingSec)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Loop Nodes View */}
-                  <div className="py-6">
-                    <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
-                      {isSealed ? 'Sealed Swappers & Direct Deliveries' : 'Blind Swappers (Codenames Enforced):'}
+                  {/* HIGH-IMPACT VISUAL SWAP CARD: YOU GIVE vs YOU RECEIVE */}
+                  {userMemberRecord && (
+                    <div className="py-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center border-b border-pink-50">
+                      {/* Left: YOU GIVE */}
+                      <div className="p-6 rounded-3xl bg-gradient-to-b from-[#FFF7F9] to-white border border-pink-200 text-center space-y-3">
+                        <div className="text-xs font-black uppercase tracking-wider text-pink-600 flex items-center justify-center gap-1.5">
+                          <span>YOU GIVE</span>
+                        </div>
+                        <div className="flex justify-center py-2">
+                          <ItemIllustration
+                            title={myGiveItem?.title || 'Give Item'}
+                            category={myGiveItem?.category}
+                            size="lg"
+                          />
+                        </div>
+                        <div className="text-lg font-black text-slate-900">
+                          {myGiveItem?.title}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {myGiveItem?.category} • {myGiveItem?.condition} ({myGiveItem?.valueBand} Value)
+                        </div>
+                      </div>
+
+                      {/* Right: YOU RECEIVE */}
+                      <div className="p-6 rounded-3xl bg-gradient-to-b from-emerald-50/40 via-teal-50/20 to-white border border-emerald-200 text-center space-y-3">
+                        <div className="text-xs font-black uppercase tracking-wider text-emerald-700 flex items-center justify-center gap-1.5">
+                          <span>YOU RECEIVE</span>
+                        </div>
+                        <div className="flex justify-center py-2">
+                          <ItemIllustration
+                            title={myReceiveItem?.title || 'Receive Item'}
+                            category={myReceiveItem?.category}
+                            size="lg"
+                          />
+                        </div>
+                        <div className="text-lg font-black text-slate-900">
+                          {myReceiveItem?.title}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {myReceiveItem?.category} • {myReceiveItem?.condition} ({myReceiveItem?.valueBand} Value)
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* OTHER MEMBERS LIST */}
+                  <div className="py-6 space-y-4">
+                    <div className="text-xs font-black uppercase tracking-wider text-slate-400">
+                      PARTICIPATING SWAPPERS:
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {proposal.members.map((member, idx) => {
                         const student = getStudent(member.studentId);
-                        const givesTitle = getItemTitle(member.givesItemId);
-                        const receivesTitle = getItemTitle(member.receivesItemId);
-                        const isThisMe = member.studentId === currentUser.id;
+                        const gives = getItem(member.givesItemId);
+                        const receives = getItem(member.receivesItemId);
+                        const isSelf = member.studentId === currentUser.id;
 
                         return (
                           <div
                             key={member.studentId}
-                            className={`p-5 rounded-2xl border transition-all ${
-                              isThisMe
-                                ? 'bg-[#fff7f9] border-pink-300 ring-2 ring-pink-100'
+                            className={`p-4 rounded-2xl border transition-all ${
+                              isSelf
+                                ? 'bg-pink-50/60 border-pink-300 ring-2 ring-pink-100'
                                 : 'bg-slate-50/60 border-slate-200'
                             }`}
                           >
-                            {/* Member Identity Header */}
-                            <div className="flex items-center justify-between gap-2 mb-3">
+                            <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">
+                                <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
                                   {idx + 1}
-                                </span>
-                                <div>
-                                  <div className="font-bold text-slate-900 text-xs flex items-center gap-1">
-                                    {isSealed ? (
-                                      <>
-                                        <Eye className="w-3 h-3 text-emerald-600" />
-                                        <span>{student?.name || member.name}</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <EyeOff className="w-3 h-3 text-slate-400" />
-                                        <span>{member.codename}</span>
-                                      </>
-                                    )}
-                                    {isThisMe && (
-                                      <span className="text-[10px] text-pink-600 font-bold px-1.5 py-0.2 rounded-full bg-pink-100">
-                                        YOU
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-[10px] text-slate-500">
-                                    {isSealed ? (student?.email || member.email) : 'Identity Hidden'}
-                                  </div>
+                                </div>
+                                <div className="font-extrabold text-xs text-slate-900 flex items-center gap-1">
+                                  {isCompleted ? (
+                                    <>
+                                      <Eye className="w-3 h-3 text-emerald-600" />
+                                      <span className="text-emerald-950 font-black">{student?.name || member.name}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Lock className="w-3 h-3 text-slate-400" />
+                                      <span>{member.codename || `Swapper ${idx + 1}`}</span>
+                                    </>
+                                  )}
+                                  {isSelf && <span className="text-[10px] text-pink-600 font-black ml-1">(YOU)</span>}
                                 </div>
                               </div>
 
-                              {/* Acceptance State */}
                               <div>
                                 {member.accepted ? (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600">
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                                    <Check className="w-3 h-3" />
                                     <span>Accepted</span>
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600">
-                                    <span>Awaiting</span>
+                                  <span className="text-[11px] font-semibold text-amber-600">
+                                    Awaiting...
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            {/* Give & Receive Cards (F7) */}
-                            <div className="space-y-2 text-xs">
-                              <div className="p-2.5 rounded-xl bg-white border border-pink-100">
-                                <span className="text-[10px] uppercase font-bold text-pink-500 block">
-                                  You Give:
-                                </span>
-                                <span className="font-bold text-slate-900">{givesTitle}</span>
-                              </div>
-
-                              <div className="p-2.5 rounded-xl bg-white border border-pink-100">
-                                <span className="text-[10px] uppercase font-bold text-emerald-600 block">
-                                  You Receive:
-                                </span>
-                                <span className="font-bold text-slate-900">{receivesTitle}</span>
-                              </div>
+                            <div className="text-[11px] text-slate-600 space-y-1 mt-2">
+                              <div>Gives: <strong className="text-slate-900">{gives?.title}</strong></div>
+                              <div>Receives: <strong className="text-slate-900">{receives?.title}</strong></div>
                             </div>
 
-                            {/* SEALED INFO: Real contact notes & dropoff/pickup codes (F8, T2) */}
-                            {isSealed && (
-                              <div className="mt-3 pt-3 border-t border-pink-100/80 space-y-2">
-                                <div className="text-[11px] text-slate-600">
-                                  <strong>Contact:</strong> {student?.contactNote || member.contactNote}
+                            {/* Completed: Reveal Contact Info */}
+                            {isCompleted && (
+                              <div className="mt-3 pt-2 border-t border-emerald-200/80 text-[11px] space-y-1 text-emerald-900">
+                                <div><strong>Contact:</strong> {student?.contactNote || member.contactNote || 'Verified Swap Desk Pickup'}</div>
+                                <div className="flex items-center justify-between text-[10px] text-emerald-700 pt-1 font-bold">
+                                  <span>✓ Loop Completed</span>
+                                  <span>+15 Score</span>
                                 </div>
+                              </div>
+                            )}
 
-                                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-                                  <div className="p-2 rounded-xl bg-white border border-slate-200">
-                                    <span className="text-[9px] uppercase font-bold text-slate-400 block flex items-center gap-1">
-                                      <KeyRound className="w-2.5 h-2.5 text-pink-500" /> Dropoff Code
-                                    </span>
-                                    <span className="font-mono font-bold text-slate-900">
-                                      {member.dropoffCode}
-                                    </span>
-                                    <div className="text-[9px] text-slate-400 mt-0.5">
-                                      {member.dropoffDone ? '✓ Checked in' : 'Pending drop'}
-                                    </div>
-                                  </div>
-
-                                  <div className="p-2 rounded-xl bg-white border border-slate-200">
-                                    <span className="text-[9px] uppercase font-bold text-slate-400 block flex items-center gap-1">
-                                      <QrCode className="w-2.5 h-2.5 text-emerald-600" /> Pickup Code
-                                    </span>
-                                    <span className="font-mono font-bold text-slate-900">
-                                      {member.pickupCode}
-                                    </span>
-                                    <div className="text-[9px] text-slate-400 mt-0.5">
-                                      {member.pickupDone ? '✓ Collected' : 'Pending pickup'}
-                                    </div>
-                                  </div>
+                            {/* Sealed: Show Dropoff/Pickup Codes for Self only */}
+                            {isSealed && !isCompleted && (
+                              <div className="mt-3 pt-2 border-t border-slate-200/80 text-[11px] space-y-1">
+                                <div className="text-slate-500 text-[10px] flex items-center gap-1">
+                                  <Lock className="w-2.5 h-2.5 text-slate-400" />
+                                  <span>Identity hidden until desk pickup</span>
                                 </div>
-
-                                {member.returnCode && (
-                                  <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px]">
-                                    <strong>Return Code:</strong> <span className="font-mono font-bold">{member.returnCode}</span>
-                                    <div className="text-[9px] text-rose-600">Present to desk to retrieve your item.</div>
-                                  </div>
-                                )}
-
-                                {/* Report Member Button (Section 22) */}
-                                {!isThisMe && (
-                                  <div className="pt-1 text-right">
-                                    <button
-                                      onClick={() => setReportData({
-                                        userId: member.studentId,
-                                        userName: student?.name || member.name || 'Member',
-                                        proposalId: proposal.id
-                                      })}
-                                      className="text-[10px] text-rose-500 hover:text-rose-700 underline font-medium"
-                                    >
-                                      Report Member
-                                    </button>
+                                {isSelf && (
+                                  <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                                    <span>Dropoff: <strong className="font-mono text-slate-900 px-1 py-0.5 bg-slate-100 rounded">{member.dropoffCode}</strong></span>
+                                    <span>Pickup: <strong className="font-mono text-emerald-700 px-1 py-0.5 bg-emerald-50 rounded">{member.pickupCode}</strong></span>
                                   </div>
                                 )}
                               </div>
                             )}
 
-                            {/* Quick Impersonate Switcher so tester can accept as this student */}
-                            {!isThisMe && isProposed && !member.accepted && (
-                              <div className="mt-3 pt-2 border-t border-slate-200/60">
-                                <button
-                                  onClick={() => impersonateUser(member.studentId)}
-                                  className="w-full text-center text-[10px] text-pink-600 hover:text-pink-700 font-semibold flex items-center justify-center gap-1"
-                                >
-                                  <UserCheck className="w-3 h-3" />
-                                  <span>Switch to {student?.name.split(' ')[0]} to Accept/Decline</span>
-                                </button>
-                              </div>
+                            {/* Impersonate helper for test evaluation */}
+                            {!isSelf && isProposed && !member.accepted && (
+                              <button
+                                onClick={() => impersonateUser(member.studentId)}
+                                className="mt-3 w-full text-center text-[10px] text-pink-600 hover:text-pink-700 font-bold flex items-center justify-center gap-1 pt-1 border-t border-slate-200"
+                              >
+                                <UserCheck className="w-3 h-3" />
+                                <span>Switch to {member.codename || `Swapper ${idx + 1}`} to Accept</span>
+                              </button>
                             )}
                           </div>
                         );
@@ -418,12 +528,12 @@ export const TheDropView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Actions for Current User (F8, F9, Section 17 Handover Choice) */}
+                  {/* USER DECISION BAR (ACCEPT / DECLINE) */}
                   {isProposed && isUserMember && (
-                    <div className="pt-4 border-t border-pink-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="pt-6 border-t border-pink-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       {/* Handover Choice Radio */}
                       <div className="flex items-center gap-3 text-xs">
-                        <span className="font-bold text-slate-700">Handover Preference:</span>
+                        <span className="font-bold text-slate-700">Handover Location:</span>
                         <label className="flex items-center gap-1.5 cursor-pointer">
                           <input
                             type="radio"
@@ -454,47 +564,68 @@ export const TheDropView: React.FC = () => {
                         </label>
                       </div>
 
-                      {/* Accept / Decline Buttons */}
-                      {!proposal.members.find(m => m.studentId === currentUser.id)?.accepted ? (
+                      {/* Accept / Decline Action Buttons */}
+                      {!userMemberRecord?.accepted ? (
                         <div className="flex items-center gap-3">
                           <button
                             onClick={() => declineProposal(proposal.id, currentUser.id)}
-                            className="px-5 py-2.5 rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50 font-semibold text-xs transition-colors"
+                            className="px-5 py-2.5 rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors"
                           >
-                            Decline Proposal (F8)
+                            Decline Proposal
                           </button>
                           <button
                             onClick={() => handleAccept(proposal.id)}
-                            className="px-6 py-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-white font-bold text-xs shadow-sm transition-all"
+                            className="px-7 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-white font-extrabold text-xs shadow-md shadow-emerald-500/20 transition-all transform active:scale-95"
                           >
-                            Accept Proposal (F8)
+                            ✓ ACCEPT PROPOSAL
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-emerald-700 font-semibold flex items-center gap-1.5">
+                        <div className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-200">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                          You have accepted this proposal. Waiting for other swappers...
-                        </span>
+                          <span>You accepted this proposal. Waiting for other swappers...</span>
+                        </div>
                       )}
                     </div>
                   )}
 
-                  {/* When sealed, Swap Meet Modal Trigger or Desk Helper */}
-                  {isSealed && (
-                    <div className="pt-4 border-t border-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-800">
-                      <span>
-                        🔒 <strong>All students accepted!</strong> Handover Method: <strong className="uppercase">{proposal.handoverMethod || 'desk'}</strong>
-                      </span>
+                  {/* SEALED PROPOSAL FOOTER */}
+                  {isSealed && !isCompleted && (
+                    <div className="pt-6 border-t border-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-900 bg-emerald-50/40 -mx-6 sm:-mx-10 -mb-6 sm:-mb-10 p-6 rounded-b-[2.5rem]">
+                      <div>
+                        🔒 <strong>All swappers accepted! Loop is Sealed.</strong> Identities remain anonymous for privacy. Deliver your item to <strong>Swap Desk Escrow Station #1</strong> using your secret dropoff code.
+                      </div>
 
                       {proposal.handoverMethod === 'meet' && (
                         <button
                           onClick={() => setMeetModalProposal(proposal)}
-                          className="px-4 py-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5"
+                          className="px-5 py-2.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5"
                         >
                           <Users className="w-3.5 h-3.5" />
-                          <span>Open Campus Quad Swap Meet Check-in</span>
+                          <span>Campus Quad Geofence Check-in</span>
                         </button>
                       )}
+                    </div>
+                  )}
+
+                  {/* COMPLETED CELEBRATION FOOTER */}
+                  {isCompleted && (
+                    <div className="pt-6 border-t border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-950 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-100 -mx-6 sm:-mx-10 -mb-6 sm:-mb-10 p-6 rounded-b-[2.5rem]">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-emerald-900 font-black text-sm">
+                          <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
+                          <span>✨ SWAP COMPLETED — REAL IDENTITIES REVEALED ✨</span>
+                        </div>
+                        <p className="text-slate-600 text-xs">
+                          All items have been verified and picked up at the Swap Desk. Loop closed successfully! Swap scores updated (+15 pts).
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3.5 py-1.5 rounded-full bg-emerald-600 text-white font-extrabold text-xs shadow-sm flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Verified Complete</span>
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -504,7 +635,7 @@ export const TheDropView: React.FC = () => {
         )}
       </div>
 
-      {/* Swap Meet Modal */}
+      {/* Modals */}
       {meetModalProposal && (
         <SwapMeetModal
           isOpen={!!meetModalProposal}
@@ -514,7 +645,6 @@ export const TheDropView: React.FC = () => {
         />
       )}
 
-      {/* Report Modal */}
       {reportData && (
         <ReportModal
           isOpen={!!reportData}

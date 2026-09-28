@@ -23,3 +23,7 @@
 .animate-pulse-subtle {
   animation: pulseSubtle 4s ease-in-out infinite;
 }
+
+.font-cursive {
+  font-family: 'Caveat', 'Pacifico', cursive;
+}

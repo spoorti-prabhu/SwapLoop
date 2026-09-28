@@ -55,6 +55,28 @@ export const SEED_USERS_SCENARIO_A: User[] = [
     emailVerified: true,
     role: 'Student',
     completedSwapsCount: 0
+  },
+  {
+    id: 'user-desk-operator',
+    name: 'Campus Desk Operator',
+    email: 'desk@college.edu',
+    contactNote: 'Main Campus Escrow Station #1',
+    trustLevel: 'Veteran',
+    swapScore: 150,
+    emailVerified: true,
+    role: 'Desk Operator',
+    completedSwapsCount: 24
+  },
+  {
+    id: 'user-admin',
+    name: 'Campus Administrator',
+    email: 'admin@college.edu',
+    contactNote: 'Student Affairs & Circularity Oversight',
+    trustLevel: 'Veteran',
+    swapScore: 200,
+    emailVerified: true,
+    role: 'Admin',
+    completedSwapsCount: 50
   }
 ];
 
@@ -66,6 +88,7 @@ export const SEED_ITEMS_SCENARIO_A: Item[] = [
     category: 'Stationery',
     condition: 'Like New',
     valueBand: 'Low',
+    imageUrl: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&w=800&q=80',
     isFreeGift: false,
     createdAt: Date.now() - 3600000 * 5
   },
@@ -76,6 +99,7 @@ export const SEED_ITEMS_SCENARIO_A: Item[] = [
     category: 'Hostel Gear',
     condition: 'Good',
     valueBand: 'Low', // In Scenario C, changed to 'Medium'
+    imageUrl: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80',
     isFreeGift: false,
     createdAt: Date.now() - 3600000 * 4
   },
@@ -86,6 +110,7 @@ export const SEED_ITEMS_SCENARIO_A: Item[] = [
     category: 'Electronics',
     condition: 'Like New',
     valueBand: 'Low',
+    imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
     isFreeGift: false,
     createdAt: Date.now() - 3600000 * 3
   },
@@ -96,6 +121,7 @@ export const SEED_ITEMS_SCENARIO_A: Item[] = [
     category: 'Electronics',
     condition: 'Good',
     valueBand: 'Low',
+    imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
     isFreeGift: false,
     createdAt: Date.now() - 3600000 * 2
   },
@@ -106,6 +132,7 @@ export const SEED_ITEMS_SCENARIO_A: Item[] = [
     category: 'Furniture',
     condition: 'Good',
     valueBand: 'Low',
+    imageUrl: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80',
     isFreeGift: false,
     createdAt: Date.now() - 3600000 * 1
   }
@@ -149,6 +176,7 @@ export const SEED_ITEM_KIRAN_GIFT: Item = {
   category: 'Furniture',
   condition: 'Good',
   valueBand: 'Medium',
+  imageUrl: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=800&q=80',
   isFreeGift: true,
   createdAt: Date.now() - 1800000
 };
