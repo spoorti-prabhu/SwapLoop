@@ -21,7 +21,6 @@ import {
   Shield,
   Users
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 interface SidebarProps {
   onOpenSettings: () => void;
@@ -46,14 +45,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     dropCountdownSeconds,
     items,
     wants,
-    triggerDropNow,
     impersonateUser,
     allUsers,
     logout
   } = useSwapLoop();
 
   const [campusDropdownOpen, setCampusDropdownOpen] = useState(false);
-  const [isTestTriggering, setIsTestTriggering] = useState(false);
 
   // Format seconds to HH:MM:SS strictly for single-line display
   const formatCountdown = (totalSec: number) => {
@@ -118,11 +115,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: 'Rules'
       },
       {
-        id: 'start_test',
+        id: 'drop',
         label: 'Start Test / Drop',
         icon: Zap,
-        isAction: true,
-        badge: 'Drop'
+        badge: 'Simulator'
       },
       {
         id: 'wall',
@@ -160,11 +156,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: 'Rules'
       },
       {
-        id: 'start_test',
+        id: 'drop',
         label: 'Start Test / Drop',
         icon: Zap,
-        isAction: true,
-        badge: 'Drop'
+        badge: 'Simulator'
       },
       {
         id: 'wall',
@@ -216,33 +211,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ];
   }
 
-  const handleNavClick = async (item: NavItem) => {
-    if (item.id === 'start_test') {
-      setIsTestTriggering(true);
-      try {
-        const res = await triggerDropNow();
-        setIsTestTriggering(false);
-        if (currentRole === 'Desk Operator') {
-          setActiveTab('desk');
-        } else if (currentRole === 'Admin') {
-          setActiveTab('admin');
-        } else {
-          setActiveTab('dashboard');
-        }
-        if (res.matchedCount > 0) {
-          confetti({
-            particleCount: 75,
-            spread: 60,
-            origin: { y: 0.6 }
-          });
-        }
-      } catch (err) {
-        setIsTestTriggering(false);
-        setActiveTab(currentRole === 'Desk Operator' ? 'desk' : 'dashboard');
-      }
-    } else {
-      setActiveTab(item.id);
-    }
+  const handleNavClick = (item: NavItem) => {
+    setActiveTab(item.id);
   };
 
   return (
@@ -444,7 +414,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   isActive
                     ? 'text-white'
                     : isAction
-                    ? `text-amber-500 ${isTestTriggering ? 'animate-spin' : ''}`
+                    ? 'text-amber-500'
                     : 'text-slate-400 group-hover:text-[#db2777]'
                 }`}
               />
