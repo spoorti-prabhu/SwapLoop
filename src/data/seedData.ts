@@ -58,9 +58,9 @@ export const SEED_USERS_SCENARIO_A: User[] = [
   },
   {
     id: 'user-desk-operator',
-    name: 'Campus Desk Operator',
+    name: 'Operator: Desk Operator 01',
     email: 'desk@college.edu',
-    contactNote: 'Main Campus Escrow Station #1',
+    contactNote: 'Residence Hall Escrow Station #1 · Staff Role',
     trustLevel: 'Veteran',
     swapScore: 150,
     emailVerified: true,
@@ -139,20 +139,24 @@ export const SEED_ITEMS_SCENARIO_A: Item[] = [
 ];
 
 export const SEED_WANTS_SCENARIO_A: WantRelation[] = [
-  // Arjun wants Bicycle, Headphones
+  // Arjun wants Bicycle, Headphones, Table lamp
   { studentId: 'user-arjun', itemId: 'item-bicycle' },
   { studentId: 'user-arjun', itemId: 'item-headphones' },
+  { studentId: 'user-arjun', itemId: 'item-table-lamp' },
 
-  // Bhavya wants Extension board
+  // Bhavya wants Extension board, Headphones
   { studentId: 'user-bhavya', itemId: 'item-ext-board' },
+  { studentId: 'user-bhavya', itemId: 'item-headphones' },
 
   // Chetan wants Mini drafter
   { studentId: 'user-chetan', itemId: 'item-drafter' },
 
-  // Divya wants Mini drafter
+  // Divya wants Bicycle, Mini drafter
+  { studentId: 'user-divya', itemId: 'item-bicycle' },
   { studentId: 'user-divya', itemId: 'item-drafter' },
 
-  // Esha wants Bicycle
+  // Esha wants Headphones, Bicycle
+  { studentId: 'user-esha', itemId: 'item-headphones' },
   { studentId: 'user-esha', itemId: 'item-bicycle' }
 ];
 

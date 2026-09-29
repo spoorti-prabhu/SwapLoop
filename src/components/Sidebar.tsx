@@ -93,14 +93,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   if (currentRole === 'Desk Operator') {
     // Desk Operator View:
-    // Hidden: Must NOT see "My Have List" or "My Want List"
-    // Visible: Browse Campus Items, How the Rules Work, Start Test, Loop Wall, Swap Desk Escrow
+    // Strictly includes 6 items in this order:
+    // 1. Dashboard (desk_dashboard)
+    // 2. Desk Ledger (desk_ledger)
+    // 3. Swap Desk Escrow (desk)
+    // 4. Browse Campus Items (browse)
+    // 5. How the Rules Work (how_it_works)
+    // 6. Loop Wall / Loophole (wall)
     navItems = [
+      {
+        id: 'desk_dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        badge: 'Live'
+      },
+      {
+        id: 'desk_ledger',
+        label: 'Desk Ledger',
+        icon: FileText,
+        badge: 'Ledger'
+      },
       {
         id: 'desk',
         label: 'Swap Desk Escrow',
         icon: Building2,
-        badge: 'Desk'
+        badge: 'Escrow'
       },
       {
         id: 'browse',
@@ -113,12 +130,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         label: 'How the Rules Work',
         icon: FileText,
         badge: 'Rules'
-      },
-      {
-        id: 'drop',
-        label: 'Start Test / Drop',
-        icon: Zap,
-        badge: 'Simulator'
       },
       {
         id: 'wall',
@@ -457,9 +468,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Avatar */}
               <div className="relative flex-shrink-0">
                 <div className="w-8 h-8 rounded-2xl bg-gradient-to-tr from-[#db2777] to-[#f472b6] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  {currentUser.name[0]}
+                  {currentRole === 'Desk Operator' ? 'OP' : currentRole === 'Admin' ? 'AD' : (currentUser.name ? currentUser.name[0] : 'U')}
                 </div>
-                {currentUser.emailVerified && (
+                {(currentRole === 'Desk Operator' || currentUser.emailVerified) && (
                   <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center">
                     <Check className="w-1.5 h-1.5 text-white stroke-[3]" />
                   </span>
@@ -470,10 +481,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {!isCollapsed && (
                 <div className="min-w-0 flex-1">
                   <div className="font-extrabold text-xs text-slate-900 truncate">
-                    {currentUser.name}
+                    {currentRole === 'Desk Operator'
+                      ? 'Operator: Desk Operator 01'
+                      : currentRole === 'Admin'
+                      ? 'Campus Administrator'
+                      : currentUser.name}
                   </div>
                   <div className="text-[10px] text-slate-400 truncate">
-                    {currentUser.email}
+                    {currentRole === 'Desk Operator'
+                      ? 'Residence Hall Escrow Station #1 · Staff Role'
+                      : currentRole === 'Admin'
+                      ? 'admin@college.edu · Full Oversight'
+                      : currentUser.email}
                   </div>
                 </div>
               )}

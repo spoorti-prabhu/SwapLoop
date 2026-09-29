@@ -15,6 +15,8 @@ import { NotificationDrawer } from './components/NotificationDrawer';
 import { AdminControlBar } from './components/AdminControlBar';
 import { LoginPage } from './components/LoginPage';
 import { AdminView } from './components/AdminView';
+import { DeskOperatorDashboard } from './components/DeskOperatorDashboard';
+import { DeskLedgerView } from './components/DeskLedgerView';
 import { GlitterCursor } from './components/GlitterCursor';
 import {
   Bell,
@@ -23,19 +25,21 @@ import {
   Menu,
   X,
   Sliders,
-  LogOut
+  LogOut,
+  Zap,
+  Building2
 } from 'lucide-react';
 import { UserRole } from './types/swaploop';
 
 const MainAppLayout: React.FC = () => {
   const {
     activeTab,
-    setActiveTab,
     currentUser,
     currentRole,
     setCurrentRole,
     isAuthenticated,
     notifications,
+    triggerDropNow,
     login,
     logout
   } = useSwapLoop();
@@ -46,6 +50,7 @@ const MainAppLayout: React.FC = () => {
   const [isNotifsOpen, setIsNotifsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAdminBarVisible, setIsAdminBarVisible] = useState(true);
+  const [isHeaderDropRunning, setIsHeaderDropRunning] = useState(false);
 
   // F10 hotkey listener for Admin and Desk Operator to toggle scenario presets
   useEffect(() => {
@@ -97,6 +102,10 @@ const MainAppLayout: React.FC = () => {
     switch (tab) {
       case 'dashboard':
         return 'Student Dashboard';
+      case 'desk_dashboard':
+        return 'Desk Operator Dashboard';
+      case 'desk_ledger':
+        return 'Desk Ledger & Verification Log';
       case 'how_it_works':
         return 'How the Rules Work';
       case 'browse':
@@ -195,8 +204,44 @@ const MainAppLayout: React.FC = () => {
           {/* Right: Quick actions, Role Switcher, Notifications, Sign Out */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
 
-            {/* Trust Tier Badge */}
-            {currentUser && (
+            {/* On-demand Run Drop Now Button for Desk Operator */}
+            {currentRole === 'Desk Operator' && (
+              <button
+                onClick={async () => {
+                  setIsHeaderDropRunning(true);
+                  try {
+                    await triggerDropNow();
+                  } finally {
+                    setIsHeaderDropRunning(false);
+                  }
+                }}
+                disabled={isHeaderDropRunning}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#db2777] hover:bg-[#be185d] text-white text-xs font-black shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                title="Immediately run circular matching engine on-demand"
+              >
+                <Zap className={`w-3.5 h-3.5 ${isHeaderDropRunning ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">{isHeaderDropRunning ? 'Running...' : 'Run Drop Now'}</span>
+              </button>
+            )}
+
+            {/* Role & Trust Badges */}
+            {currentUser && currentRole === 'Desk Operator' ? (
+              <div
+                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border bg-pink-50 border-pink-200 text-[#db2777]"
+                title="Residence Hall Escrow Station #1 · Staff Role"
+              >
+                <Building2 className="w-3 h-3 text-[#db2777]" />
+                <span>Station #1 Staff</span>
+              </div>
+            ) : currentUser && currentRole === 'Admin' ? (
+              <div
+                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border bg-slate-900 border-slate-800 text-white"
+                title="Campus Administrator Oversight"
+              >
+                <Shield className="w-3 h-3 text-pink-400" />
+                <span>Admin Oversight</span>
+              </div>
+            ) : currentUser ? (
               <div
                 className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                   currentUser.trustLevel === 'New'
@@ -210,10 +255,10 @@ const MainAppLayout: React.FC = () => {
                 <Shield className="w-3 h-3" />
                 <span>{currentUser.trustLevel} Tier</span>
               </div>
-            )}
+            ) : null}
 
-            {/* Swap Score Pill */}
-            {currentUser && (
+            {/* Swap Score Pill - Students only */}
+            {currentUser && currentRole === 'Student' && (
               <div
                 className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[11px] font-bold shadow-2xs"
                 title="Swap Score (starts at 100)"
@@ -230,9 +275,6 @@ const MainAppLayout: React.FC = () => {
                   key={role}
                   onClick={() => {
                     setCurrentRole(role);
-                    if (role === 'Desk Operator') setActiveTab('desk');
-                    else if (role === 'Admin') setActiveTab('admin');
-                    else setActiveTab('dashboard');
                   }}
                   className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
                     currentRole === role
@@ -285,6 +327,8 @@ const MainAppLayout: React.FC = () => {
         <main className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 scrollbar-thin">
           <div className="max-w-6xl mx-auto w-full min-w-0">
             {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'desk_dashboard' && <DeskOperatorDashboard />}
+            {activeTab === 'desk_ledger' && <DeskLedgerView />}
             {activeTab === 'how_it_works' && <HomeHeroView />}
             {activeTab === 'home' && <HomeHeroView />}
             {activeTab === 'browse' && <BrowseItemsView />}

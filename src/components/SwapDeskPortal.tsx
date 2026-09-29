@@ -159,7 +159,7 @@ export const SwapDeskPortal: React.FC<SwapDeskPortalProps> = ({ selectedCampus =
                 #{activeProposal ? activeProposal.id.slice(-4).toUpperCase() : '0482'}
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-                Thursday evening loop
+                {new Date().toLocaleDateString('en-US', { weekday: 'long' })} evening loop
               </h2>
             </div>
 
@@ -258,22 +258,26 @@ export const SwapDeskPortal: React.FC<SwapDeskPortalProps> = ({ selectedCampus =
                       {getAvatarInitials(idx)}
                     </div>
 
-                    {/* Member Details */}
+                    {/* Member Details - Unmasked for Operator */}
                     <div className="min-w-0">
-                      <div className="font-extrabold text-sm text-slate-900 truncate">
-                        {member.codename || `Swapper ${idx + 1}`}
-                        {isCompleted && student && (
-                          <span className="ml-1 text-slate-500 font-medium text-xs">({student.name})</span>
-                        )}
+                      <div className="font-extrabold text-sm text-slate-900 truncate flex items-center gap-1.5">
+                        <span>{student?.name || member.name || member.codename}</span>
+                        <span className="text-[10px] font-bold text-[#db2777] bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200">
+                          {member.codename}
+                        </span>
                       </div>
                       <div className="text-xs text-slate-500 truncate mt-0.5">
+                        <span className="text-slate-600 font-medium">
+                          {student?.contactNote || member.contactNote}
+                        </span>
+                        <span className="mx-1 text-slate-300">·</span>
                         {member.dropoffDone ? (
-                          <span className="text-slate-600 font-medium">
-                            {member.contactNote || 'Item received · Escrow secured'}
+                          <span className="text-emerald-700 font-semibold">
+                            Deposited: {gives?.title}
                           </span>
                         ) : (
                           <span className="text-slate-400">
-                            Awaiting item · {gives?.title || 'Physical Item'}
+                            Awaiting: {gives?.title}
                           </span>
                         )}
                       </div>

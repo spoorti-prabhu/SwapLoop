@@ -5,6 +5,7 @@ import {
   Item,
   WantRelation,
   Proposal,
+  ProposalStatus,
   AppNotification,
   LoopWallStats,
   UserRole,
@@ -152,7 +153,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     members: [
       {
         studentId: 'user-arjun',
-        codename: 'Swapper 1',
+        codename: 'Swapper A',
         givesItemId: 'item-drafter',
         receivesItemId: 'item-bicycle',
         accepted: true,
@@ -161,12 +162,12 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         dropoffDone: true,
         pickupCode: '912048',
         pickupDone: false,
-        name: 'Swapper 1',
-        contactNote: 'Item received · 4:32 PM'
+        name: 'Arjun',
+        contactNote: 'Hostel 3, Room 204 | Ph: +91 98765 43210'
       },
       {
         studentId: 'user-bhavya',
-        codename: 'Swapper 2',
+        codename: 'Swapper B',
         givesItemId: 'item-bicycle',
         receivesItemId: 'item-ext-board',
         accepted: true,
@@ -175,12 +176,12 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         dropoffDone: true,
         pickupCode: '741295',
         pickupDone: false,
-        name: 'Swapper 2',
-        contactNote: 'Item received · 4:48 PM'
+        name: 'Bhavya',
+        contactNote: 'Hostel 2, Room 112 | Ph: +91 98765 43211'
       },
       {
         studentId: 'user-chetan',
-        codename: 'Swapper 3',
+        codename: 'Swapper C',
         givesItemId: 'item-ext-board',
         receivesItemId: 'item-drafter',
         accepted: true,
@@ -189,8 +190,8 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         dropoffDone: false,
         pickupCode: '582319',
         pickupDone: false,
-        name: 'Swapper 3',
-        contactNote: 'Awaiting item'
+        name: 'Chetan',
+        contactNote: 'Hostel 4, Room 305 | Ph: +91 98765 43212'
       }
     ]
   };
@@ -209,7 +210,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [currentUserId, setCurrentUserId] = useState<string>(initialAuthenticated ? initialAuthUserId : '');
   const [currentRole, setCurrentRole] = useState<UserRole>(initialRole);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialAuthenticated && !!initialAuthUserId);
-  const [activeTab, setActiveTab] = useState<string>(initialRole === 'Desk Operator' ? 'desk' : initialRole === 'Admin' ? 'admin' : 'dashboard');
+  const [activeTab, setActiveTab] = useState<string>(initialRole === 'Desk Operator' ? 'desk_dashboard' : initialRole === 'Admin' ? 'admin' : 'dashboard');
   const [items, setItems] = useState<Item[]>(getInitialItems);
   const [wants, setWants] = useState<WantRelation[]>(getInitialWants);
   const [proposals, setProposals] = useState<Proposal[]>(getInitialProposals);
@@ -340,7 +341,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         localStorage.setItem('swaploop_authenticated', 'true');
         localStorage.setItem('swaploop_auth_role', res.user.role);
         if (res.user.role === 'Desk Operator') {
-          setActiveTab('desk');
+          setActiveTab('desk_dashboard');
         } else if (res.user.role === 'Admin') {
           setActiveTab('admin');
         } else {
@@ -361,7 +362,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         localStorage.setItem('swaploop_authenticated', 'true');
         localStorage.setItem('swaploop_auth_role', matched.role);
         if (matched.role === 'Desk Operator') {
-          setActiveTab('desk');
+          setActiveTab('desk_dashboard');
         } else if (matched.role === 'Admin') {
           setActiveTab('admin');
         } else {
@@ -371,6 +372,39 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
     return false;
+  };
+
+  const handleSetCurrentRole = (role: UserRole) => {
+    setCurrentRole(role);
+    localStorage.setItem('swaploop_auth_role', role);
+    if (role === 'Desk Operator') {
+      const deskUser = users.find(u => u.role === 'Desk Operator') || SEED_USERS_SCENARIO_A.find(u => u.role === 'Desk Operator');
+      if (deskUser) {
+        setCurrentUserId(deskUser.id);
+        setAuthUserId(deskUser.id);
+        localStorage.setItem('swaploop_auth_user_id', deskUser.id);
+      }
+      setActiveTab('desk_dashboard');
+    } else if (role === 'Admin') {
+      const adminUser = users.find(u => u.role === 'Admin') || SEED_USERS_SCENARIO_A.find(u => u.role === 'Admin');
+      if (adminUser) {
+        setCurrentUserId(adminUser.id);
+        setAuthUserId(adminUser.id);
+        localStorage.setItem('swaploop_auth_user_id', adminUser.id);
+      }
+      setActiveTab('admin');
+    } else if (role === 'Student') {
+      const activeStudent = users.find(u => u.id === currentUserId && u.role === 'Student');
+      if (!activeStudent) {
+        const studentUser = users.find(u => u.role === 'Student') || SEED_USERS_SCENARIO_A[0];
+        if (studentUser) {
+          setCurrentUserId(studentUser.id);
+          setAuthUserId(studentUser.id);
+          localStorage.setItem('swaploop_auth_user_id', studentUser.id);
+        }
+      }
+      setActiveTab('dashboard');
+    }
   };
 
   const signup = async (data: { name: string; email: string; password?: string; contactNote: string }) => {
@@ -421,7 +455,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       localStorage.setItem('swaploop_authenticated', 'true');
       localStorage.setItem('swaploop_auth_role', targetUser.role);
       if (targetUser.role === 'Desk Operator') {
-        setActiveTab('desk');
+        setActiveTab('desk_dashboard');
       } else if (targetUser.role === 'Admin') {
         setActiveTab('admin');
       } else {
@@ -599,7 +633,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Proposal Lifecycle (F8, F9)
-  const acceptProposal = async (proposalId: string, _studentId: string, handoverChoice: 'desk' | 'meet' = 'desk') => {
+  const acceptProposal = async (proposalId: string, studentId: string, handoverChoice: 'desk' | 'meet' = 'desk') => {
     try {
       const res = await api.acceptProposal(proposalId, handoverChoice);
       await refreshData();
@@ -612,7 +646,38 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
       }
     } catch (err) {
-      console.error('Accept proposal error:', err);
+      console.warn('Backend acceptProposal unavailable, running client optimistic fallback:', err);
+      let allAccepted = false;
+      const updated = proposals.map((p) => {
+        if (p.id === proposalId) {
+          const updatedMembers = p.members.map((m) => {
+            if (m.studentId === studentId || m.studentId === currentUser?.id) {
+              return { ...m, accepted: true, handoverChoice };
+            }
+            return m;
+          });
+          allAccepted = updatedMembers.every((m) => m.accepted);
+          return {
+            ...p,
+            members: updatedMembers,
+            status: (allAccepted ? 'sealed' : 'proposed') as ProposalStatus,
+            handoverMethod: handoverChoice
+          };
+        }
+        return p;
+      });
+      setProposals(updated);
+      try {
+        localStorage.setItem('swaploop_local_proposals', JSON.stringify(updated));
+      } catch {}
+
+      if (allAccepted) {
+        confetti({
+          particleCount: 120,
+          spread: 100,
+          origin: { y: 0.5 }
+        });
+      }
     }
   };
 
@@ -621,7 +686,20 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await api.declineProposal(proposalId);
       await refreshData();
     } catch (err) {
-      console.error('Decline proposal error:', err);
+      console.warn('Backend declineProposal unavailable, running client optimistic fallback:', err);
+      const updated = proposals.map((p) => {
+        if (p.id === proposalId) {
+          return {
+            ...p,
+            status: 'declined' as ProposalStatus
+          };
+        }
+        return p;
+      });
+      setProposals(updated);
+      try {
+        localStorage.setItem('swaploop_local_proposals', JSON.stringify(updated));
+      } catch {}
     }
   };
 
@@ -631,6 +709,8 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await refreshData();
     } catch (err) {
       console.error('Expire proposal error:', err);
+      const updated = proposals.map((p) => (p.id === proposalId ? { ...p, status: 'expired' as ProposalStatus } : p));
+      setProposals(updated);
     }
   };
 
@@ -856,7 +936,7 @@ export const SwapLoopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         currentUser,
         currentRole,
-        setCurrentRole,
+        setCurrentRole: handleSetCurrentRole,
         isAuthenticated,
         activeTab,
         setActiveTab,
